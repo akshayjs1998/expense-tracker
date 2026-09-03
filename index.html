@@ -31,6 +31,8 @@
     --brick: #9C3D2E;
     --slate: #4A5B6B;
     --slate-deep: #38454F;
+    --rust: #9B5B45;
+    --rust-deep: #7A4635;
     --bezel: #23281F;
   }
   *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
@@ -246,12 +248,17 @@
   .add-cat-inline input{ flex:1; border:none; border-bottom:1px solid var(--rule); background:transparent; padding:6px 2px; font-size:13px; font-family:inherit; }
   .add-cat-inline button{ background:none; border:none; color:var(--brass-deep); font-size:13px; cursor:pointer; }
 
-  /* ---- Lend tab ---- */
+  .type-toggle button.active.lent{ background: var(--slate); color:#F5F3EB; }
+  .type-toggle button.active.borrowed{ background: var(--rust); color:#F5F3EB; }
+
+  /* ---- Lend/Borrow tab ---- */
   .stat-card.lend .value{ color:var(--slate-deep); }
+  .stat-card.lend.borrow .value{ color:var(--rust-deep); }
   .new-loan-toggle{
     width:100%; padding:11px 0; border-radius:10px; border:1.5px dashed var(--slate); background:none;
     color:var(--slate-deep); font-size:13.5px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; margin-bottom:18px;
   }
+  .new-loan-toggle.is-borrow{ border-color:var(--rust); color:var(--rust-deep); }
   .new-loan-form{ background:var(--card); border-radius:12px; padding:14px; margin-bottom:18px; display:none; }
   .new-loan-form.open{ display:block; }
   .new-loan-form .field-row{ margin-bottom:12px; }
@@ -268,6 +275,18 @@
     padding:7px 2px; font-size:14px; font-family:'Inter',sans-serif; color:var(--ink);
   }
   .submit-btn.lend{ background:var(--slate); }
+  .submit-btn.lend.borrowed{ background:var(--rust); }
+  .chip.kind-chip.selected{ background:var(--ink); border-color:var(--ink); color:#F5F3EB; }
+
+  .person-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--card); border-radius:10px; margin-bottom:8px; cursor:pointer; border:1.5px solid transparent; }
+  .person-row.active-filter{ border-color:var(--slate); }
+  .person-row .name{ font-size:13.5px; font-weight:600; }
+  .person-row .sub{ font-size:10.5px; color:var(--ink-soft); margin-top:2px; }
+  .person-row .amt{ font-family:'IBM Plex Mono',monospace; font-size:13.5px; font-weight:600; }
+  .clear-filter{ display:block; font-size:11.5px; color:var(--brass-deep); background:none; border:none; cursor:pointer; margin-bottom:10px; padding:0; }
+
+  .loan-clearby{ font-size:10.5px; color:var(--ink-soft); margin-top:4px; }
+  .kind-tag{ display:inline-block; font-size:9.5px; font-weight:600; padding:2px 6px; border-radius:8px; background:var(--paper-alt); color:var(--ink-soft); margin-left:6px; vertical-align:middle; }
 
   .inst-list{ margin-bottom:10px; }
   .inst-row{ display:flex; align-items:center; justify-content:space-between; padding:7px 0; border-bottom:1px dotted var(--rule); gap:8px; }
@@ -284,6 +303,8 @@
   .activity-row:last-child{ border-bottom:none; }
   .activity-date{ color:var(--ink-soft); width:38px; flex-shrink:0; font-size:11px; padding-top:1px; }
   .activity-text.repay{ color:var(--moss-deep); }
+  .activity-text.closed{ color:var(--moss-deep); font-weight:600; }
+  .activity-text.deleted{ color:var(--ink-soft); text-decoration:line-through; }
 
   .loan-card{ background:var(--card); border-radius:12px; padding:14px; margin-bottom:12px; }
   .loan-card.settled{ opacity:0.6; }
@@ -292,6 +313,7 @@
   .loan-date{ font-size:11px; color:var(--ink-soft); margin-top:2px; }
   .loan-outstanding{ text-align:right; }
   .loan-outstanding .amt{ font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:600; color:var(--slate-deep); }
+  .loan-card.borrowed .loan-outstanding .amt{ color:var(--rust-deep); }
   .loan-outstanding .lbl{ font-size:10px; color:var(--ink-soft); }
   .settled-tag{ font-size:10px; color:var(--moss-deep); font-weight:600; }
   .loan-bar{ height:6px; background:var(--paper-alt); border-radius:2px; overflow:hidden; margin-top:10px; }
@@ -385,17 +407,30 @@
     </section>
   </div>
 
-  <!-- LEND TAB -->
+  <!-- LEND/BORROW TAB -->
   <div class="screen" id="tab-lend">
-    <div class="stat-cards">
-      <div class="stat-card lend"><div class="label">Outstanding</div><div class="value" id="statLendOut">₹0</div></div>
-      <div class="stat-card lend"><div class="label">Repaid</div><div class="value" id="statLendRepaid">₹0</div></div>
+    <div class="type-toggle" id="creditToggle">
+      <button type="button" class="lent active" data-dir="lent">Lent</button>
+      <button type="button" class="borrowed" data-dir="borrowed">Borrowed</button>
     </div>
 
-    <button type="button" class="new-loan-toggle" id="newLoanToggle">+ New loan</button>
+    <div class="stat-cards">
+      <div class="stat-card lend"><div class="label" id="creditStat1Label">Owed to you</div><div class="value" id="statLendOut">₹0</div></div>
+      <div class="stat-card lend"><div class="label" id="creditStat2Label">Repaid</div><div class="value" id="statLendRepaid">₹0</div></div>
+    </div>
+
+    <button type="button" class="new-loan-toggle" id="newLoanToggle">+ New entry</button>
     <div class="new-loan-form" id="newLoanForm">
+      <div class="field-row" id="kindFieldRow" style="display:none;">
+        <label>Type</label>
+        <div class="chip-row" id="kindChipRow">
+          <button type="button" class="chip kind-chip selected" data-kind="person">Person</button>
+          <button type="button" class="chip kind-chip" data-kind="loan">Bank loan / EMI</button>
+          <button type="button" class="chip kind-chip" data-kind="chit">Chit fund</button>
+        </div>
+      </div>
       <div class="field-row">
-        <label>Person</label>
+        <label id="personFieldLabel">Person</label>
         <input type="text" id="loanPerson" list="personList" placeholder="Who's it for?" maxlength="40">
         <datalist id="personList"></datalist>
       </div>
@@ -417,7 +452,7 @@
       <div class="installment-fields" id="installmentFields" style="display:none;">
         <div class="field-row">
           <label>Number of installments</label>
-          <input type="number" id="loanInstallCount" min="2" max="24" value="3">
+          <input type="number" id="loanInstallCount" min="2" max="60" value="3">
         </div>
         <div class="field-row">
           <label>Frequency</label>
@@ -430,10 +465,15 @@
       <button type="button" class="submit-btn lend" id="submitLoan">Add loan</button>
     </div>
 
+    <section class="block" id="personSummaryBlock" style="display:none;">
+      <div class="section-title">By person</div>
+      <div id="personSummary"></div>
+    </section>
+
     <div id="loansList"></div>
 
     <section class="block">
-      <div class="section-title">Activity</div>
+      <div class="section-title">History</div>
       <div id="loanActivity"></div>
     </section>
   </div>
@@ -486,7 +526,7 @@
     </button>
     <button class="nav-btn" data-tab="lend">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-      <span>Lend</span>
+      <span>Credit</span>
     </button>
     <button class="nav-btn" data-tab="history">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/></svg>
@@ -508,13 +548,16 @@
   const DEFAULT_EXPENSE_CATS = ["Food","Transport","Utilities","Rent/EMI","Shopping","Health","Entertainment","Savings/Investment","Business","Other"];
   const DEFAULT_INCOME_CATS = ["Business Income","Salary/Drawings","Investment Returns","Rental Income","Freelance","Other Income"];
 
-  let data = { expenseCategories: [...DEFAULT_EXPENSE_CATS], incomeCategories: [...DEFAULT_INCOME_CATS], budgets: {}, entries: [], loans: [] };
+  let data = { expenseCategories: [...DEFAULT_EXPENSE_CATS], incomeCategories: [...DEFAULT_INCOME_CATS], budgets: {}, entries: [], loans: [], loanLog: [] };
   let currentMonth = new Date(); currentMonth.setDate(1);
   let currentType = 'expense';
   let selectedCategory = null;
   let historyFilter = 'all';
   let newRowId = null;
   let expandedLoanId = null;
+  let creditDirection = 'lent';
+  let selectedKind = 'person';
+  let personFilter = null;
 
   function fmt(n){
     n = Math.round(n*100)/100;
@@ -542,7 +585,8 @@
           data.incomeCategories = (p.incomeCategories && p.incomeCategories.length) ? p.incomeCategories : DEFAULT_INCOME_CATS;
           data.budgets = p.budgets || {};
           data.entries = p.entries || [];
-          data.loans = p.loans || [];
+          data.loans = (p.loans || []).map(l => ({ direction:'lent', kind:'person', settledLogged:false, ...l }));
+          data.loanLog = p.loanLog || [];
         } else if(p.expenses){
           // migrate old expense-only shape
           data.expenseCategories = (p.categories && p.categories.length) ? p.categories : DEFAULT_EXPENSE_CATS;
@@ -777,9 +821,83 @@
     newRowId = null;
   }
 
-  /* ---------- Lend tab ---------- */
+  /* ---------- Lend / Borrow tab ---------- */
   function loanRepaid(loan){ return (loan.repayments||[]).reduce((s,r)=>s+Number(r.amount),0); }
   function loanOutstanding(loan){ return Math.max(0, Number(loan.amount) - loanRepaid(loan)); }
+
+  function logEvent(action, loan, opts){
+    opts = opts || {};
+    data.loanLog.push({
+      id: Date.now()+Math.random(),
+      action,
+      direction: loan.direction,
+      kind: loan.kind || 'person',
+      person: loan.person,
+      amount: opts.amount !== undefined ? opts.amount : loan.amount,
+      date: opts.date || loan.date,
+      note: opts.note !== undefined ? opts.note : (loan.note||'')
+    });
+  }
+
+  function checkAndLogClosed(loan){
+    const isSettled = loanOutstanding(loan) <= 0;
+    if(isSettled && !loan.settledLogged){
+      logEvent('closed', loan);
+      loan.settledLogged = true;
+    } else if(!isSettled && loan.settledLogged){
+      loan.settledLogged = false;
+    }
+  }
+
+  function updateCreditLabels(){
+    const l1 = document.getElementById('creditStat1Label');
+    const l2 = document.getElementById('creditStat2Label');
+    const btn = document.getElementById('submitLoan');
+    const toggle = document.getElementById('newLoanToggle');
+    if(creditDirection === 'lent'){
+      l1.textContent = 'Owed to you';
+      l2.textContent = 'Repaid to you';
+      btn.textContent = 'Add loan';
+      btn.classList.remove('borrowed');
+      toggle.classList.remove('is-borrow');
+      toggle.textContent = '+ New loan';
+    } else {
+      l1.textContent = 'You owe';
+      l2.textContent = "You've repaid";
+      btn.textContent = 'Add entry';
+      btn.classList.add('borrowed');
+      toggle.classList.add('is-borrow');
+      toggle.textContent = '+ New entry';
+    }
+    document.querySelectorAll('.stat-card.lend').forEach(c => c.classList.toggle('borrow', creditDirection==='borrowed'));
+    document.getElementById('kindFieldRow').style.display = creditDirection === 'borrowed' ? '' : 'none';
+    updatePersonFieldLabel();
+  }
+
+  function updatePersonFieldLabel(){
+    const label = document.getElementById('personFieldLabel');
+    if(creditDirection === 'lent'){ label.textContent = 'Person'; return; }
+    const map = { person:'Person', loan:'Lender / Bank', chit:'Chit group' };
+    label.textContent = map[selectedKind] || 'Person';
+  }
+
+  document.querySelectorAll('#creditToggle button').forEach(b => {
+    b.addEventListener('click', () => {
+      creditDirection = b.dataset.dir;
+      document.querySelectorAll('#creditToggle button').forEach(x => x.classList.toggle('active', x===b));
+      personFilter = null;
+      updateCreditLabels();
+      renderLend();
+    });
+  });
+
+  document.querySelectorAll('.kind-chip').forEach(b => {
+    b.addEventListener('click', () => {
+      selectedKind = b.dataset.kind;
+      document.querySelectorAll('.kind-chip').forEach(x => x.classList.toggle('selected', x===b));
+      updatePersonFieldLabel();
+    });
+  });
 
   document.getElementById('newLoanToggle').addEventListener('click', () => {
     const form = document.getElementById('newLoanForm');
@@ -796,7 +914,7 @@
 
   function populatePersonList(){
     const dl = document.getElementById('personList');
-    const names = [...new Set(data.loans.map(l => l.person))];
+    const names = [...new Set(data.loans.filter(l => l.direction===creditDirection).map(l => l.person))];
     dl.innerHTML = names.map(n => `<option value="${n}"></option>`).join('');
   }
 
@@ -829,7 +947,10 @@
       }
     }
     const id = Date.now();
-    data.loans.push({ id, person, amount, date, note, repayments: [], installments });
+    const kind = creditDirection === 'borrowed' ? selectedKind : 'person';
+    const loan = { id, direction: creditDirection, kind, person, amount, date, note, repayments: [], installments, settledLogged:false };
+    data.loans.push(loan);
+    logEvent('add', loan);
     await saveData();
     document.getElementById('loanPerson').value = '';
     document.getElementById('loanAmount').value = '';
@@ -838,7 +959,7 @@
     document.getElementById('installmentFields').style.display = 'none';
     document.getElementById('newLoanForm').classList.remove('open');
     expandedLoanId = id;
-    showToast('Lent ' + fmt(amount) + ' to ' + person);
+    showToast((creditDirection==='lent' ? 'Lent ' : 'Borrowed ') + fmt(amount) + (creditDirection==='lent' ? ' to ' : ' from ') + person);
     renderLend();
   });
 
@@ -863,18 +984,65 @@
     return `<div class="inst-list">${rows}</div>`;
   }
 
+  function renderPersonSummary(list){
+    const block = document.getElementById('personSummaryBlock');
+    const box = document.getElementById('personSummary');
+    const people = {};
+    list.forEach(l => {
+      const out = loanOutstanding(l);
+      if(!people[l.person]) people[l.person] = { outstanding:0, count:0, nextDue:null };
+      people[l.person].outstanding += out;
+      people[l.person].count += 1;
+      (l.installments||[]).forEach(inst => {
+        if(!inst.paid && (!people[l.person].nextDue || inst.dueDate < people[l.person].nextDue)){
+          people[l.person].nextDue = inst.dueDate;
+        }
+      });
+    });
+    const names = Object.keys(people);
+    if(names.length <= 1){ block.style.display = 'none'; box.innerHTML = ''; return; }
+    block.style.display = '';
+    const sortedNames = names.sort((a,b) => people[b].outstanding - people[a].outstanding);
+    const clearBtn = personFilter ? `<button type="button" class="clear-filter" id="clearPersonFilter">✕ Clear filter (${personFilter})</button>` : '';
+    box.innerHTML = clearBtn + sortedNames.map(name => {
+      const p = people[name];
+      const dueTxt = p.nextDue ? ('Next due ' + new Date(p.nextDue+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'})) : (p.count+' entr'+(p.count===1?'y':'ies'));
+      return `<div class="person-row ${personFilter===name?'active-filter':''}" data-person="${name}">
+        <div><div class="name">${name}</div><div class="sub">${dueTxt}</div></div>
+        <div class="amt">${p.outstanding>0?fmt(p.outstanding):'Settled'}</div>
+      </div>`;
+    }).join('');
+    box.querySelectorAll('.person-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const name = row.dataset.person;
+        personFilter = (personFilter===name) ? null : name;
+        renderLend();
+      });
+    });
+    const cf = document.getElementById('clearPersonFilter');
+    if(cf) cf.addEventListener('click', (e) => { e.stopPropagation(); personFilter = null; renderLend(); });
+  }
+
   function renderLend(){
-    const totalOut = data.loans.reduce((s,l)=>s+loanOutstanding(l),0);
-    const totalRepaid = data.loans.reduce((s,l)=>s+loanRepaid(l),0);
+    updateCreditLabels();
+    const active = data.loans.filter(l => l.direction === creditDirection);
+    const totalOut = active.reduce((s,l)=>s+loanOutstanding(l),0);
+    const totalRepaid = active.reduce((s,l)=>s+loanRepaid(l),0);
     document.getElementById('statLendOut').textContent = fmt(totalOut);
     document.getElementById('statLendRepaid').textContent = fmt(totalRepaid);
 
+    renderPersonSummary(active);
+
+    let list = active;
+    if(personFilter) list = list.filter(l => l.person === personFilter);
+
     const box = document.getElementById('loansList');
-    if(data.loans.length === 0){
-      box.innerHTML = '<div class="empty-state">Nothing lent out yet. Add a loan above to start tracking it.</div>';
+    if(list.length === 0){
+      box.innerHTML = `<div class="empty-state">${creditDirection==='lent' ? 'Nothing lent out yet.' : 'Nothing borrowed yet.'} Add an entry above to start tracking it.</div>`;
+      renderLoanActivity();
       return;
     }
-    const sorted = [...data.loans].sort((a,b) => {
+    const sorted = [...list].sort((a,b) => {
       const aOut = loanOutstanding(a), bOut = loanOutstanding(b);
       if((aOut>0) !== (bOut>0)) return aOut>0 ? -1 : 1;
       return b.date.localeCompare(a.date);
@@ -887,6 +1055,16 @@
       const d = new Date(loan.date+'T00:00:00');
       const dateStr = d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
       const isOpen = loan.id === expandedLoanId;
+      const kindTag = loan.kind === 'loan' ? '<span class="kind-tag">Loan</span>' : loan.kind === 'chit' ? '<span class="kind-tag">Chit</span>' : '';
+      let clearBy = '';
+      if(loan.installments && loan.installments.length){
+        const unpaid = loan.installments.filter(i => !i.paid);
+        const last = loan.installments[loan.installments.length-1];
+        const lastDate = new Date(last.dueDate+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+        clearBy = unpaid.length
+          ? `<div class="loan-clearby">${unpaid.length} of ${loan.installments.length} stages left · clears by ${lastDate}</div>`
+          : `<div class="loan-clearby">All stages paid</div>`;
+      }
       const repayRows = (loan.repayments||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r => {
         const rd = new Date(r.date+'T00:00:00');
         return `<div class="repay-row">
@@ -896,19 +1074,20 @@
       }).join('') || '<div class="repay-row"><span style="color:var(--ink-soft); font-style:italic;">No repayments yet</span></div>';
       const instRows = renderInstallmentRows(loan);
 
-      return `<div class="loan-card ${settled?'settled':''}">
+      return `<div class="loan-card ${settled?'settled':''} ${loan.direction==='borrowed'?'borrowed':''}">
         <div class="loan-top" data-toggle="${loan.id}">
           <div>
-            <div class="loan-person">${loan.person}</div>
+            <div class="loan-person">${loan.person}${kindTag}</div>
             <div class="loan-date">${dateStr}${loan.note?' · '+loan.note:''}</div>
+            ${clearBy}
           </div>
           <div class="loan-outstanding">
-            ${settled ? '<div class="settled-tag">Settled</div>' : `<div class="amt">${fmt(outstanding)}</div><div class="lbl">owed</div>`}
+            ${settled ? '<div class="settled-tag">Settled</div>' : `<div class="amt">${fmt(outstanding)}</div><div class="lbl">${creditDirection==='lent'?'owed':'you owe'}</div>`}
           </div>
         </div>
         <div class="loan-bar"><div class="loan-bar-fill" style="width:${pct}%"></div></div>
         <div class="loan-detail ${isOpen?'open':''}" id="loan-detail-${loan.id}">
-          <div style="font-size:11px; color:var(--ink-soft); margin-bottom:6px;">Lent ${fmt(loan.amount)} · Repaid ${fmt(repaid)}</div>
+          <div style="font-size:11px; color:var(--ink-soft); margin-bottom:6px;">${creditDirection==='lent'?'Lent':'Borrowed'} ${fmt(loan.amount)} · Repaid ${fmt(repaid)}</div>
           ${instRows}
           ${repayRows}
           ${!settled ? `
@@ -917,7 +1096,7 @@
             <input type="date" id="repayDate-${loan.id}" value="${todayStr()}">
             <button type="button" data-repay-loan="${loan.id}">Add</button>
           </div>` : ''}
-          <button class="loan-delete-btn" data-delete-loan="${loan.id}">Delete this loan</button>
+          <button class="loan-delete-btn" data-delete-loan="${loan.id}">Delete this entry</button>
         </div>
       </div>`;
     }).join('');
@@ -939,7 +1118,10 @@
         const loan = data.loans.find(l => l.id === loanId);
         if(!loan) return;
         loan.repayments = loan.repayments || [];
-        loan.repayments.push({ id: Date.now(), amount: amt, date: dateInput.value || todayStr(), instId: null });
+        const repayDate = dateInput.value || todayStr();
+        loan.repayments.push({ id: Date.now(), amount: amt, date: repayDate, instId: null });
+        logEvent('repay', loan, { amount: amt, date: repayDate });
+        checkAndLogClosed(loan);
         await saveData();
         showToast('Repayment of ' + fmt(amt) + ' logged');
         renderLend();
@@ -957,6 +1139,8 @@
         inst.paidDate = todayStr();
         loan.repayments = loan.repayments || [];
         loan.repayments.push({ id: Date.now(), amount: inst.amount, date: todayStr(), note: `Stage ${inst.seq} of ${inst.total}`, instId: inst.id });
+        logEvent('repay', loan, { amount: inst.amount, date: todayStr(), note: `Stage ${inst.seq} of ${inst.total}` });
+        checkAndLogClosed(loan);
         await saveData();
         showToast('Stage ' + inst.seq + ' marked paid');
         renderLend();
@@ -974,6 +1158,7 @@
           const inst = (loan.installments||[]).find(i => i.id === removed.instId);
           if(inst){ inst.paid = false; inst.paidDate = null; }
         }
+        checkAndLogClosed(loan);
         await saveData();
         renderLend();
       });
@@ -981,6 +1166,8 @@
     box.querySelectorAll('[data-delete-loan]').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const loanId = Number(e.currentTarget.dataset.deleteLoan);
+        const loan = data.loans.find(l => l.id === loanId);
+        if(loan) logEvent('delete', loan, { amount: loan.amount });
         data.loans = data.loans.filter(l => l.id !== loanId);
         await saveData();
         expandedLoanId = null;
@@ -993,21 +1180,31 @@
   function renderLoanActivity(){
     const box = document.getElementById('loanActivity');
     if(!box) return;
-    const events = [];
-    data.loans.forEach(loan => {
-      events.push({ date: loan.date, text: `Lent ${fmt(loan.amount)} to ${loan.person}${loan.note?' — '+loan.note:''}`, kind:'lend' });
-      (loan.repayments||[]).forEach(r => {
-        events.push({ date: r.date, text: `${loan.person} repaid ${fmt(r.amount)}${r.note?' ('+r.note+')':''}`, kind:'repay' });
-      });
-    });
-    if(events.length === 0){ box.innerHTML = ''; return; }
-    events.sort((a,b) => b.date.localeCompare(a.date));
-    box.innerHTML = events.slice(0,25).map(ev => {
+    let events = data.loanLog.filter(ev => ev.direction === creditDirection);
+    if(personFilter) events = events.filter(ev => ev.person === personFilter);
+    if(events.length === 0){ box.innerHTML = '<div class="empty-state">No history yet.</div>'; return; }
+    const sorted = [...events].sort((a,b) => b.date.localeCompare(a.date) || (b.id - a.id));
+    box.innerHTML = sorted.slice(0,40).map(ev => {
       const d = new Date(ev.date+'T00:00:00');
       const label = d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
-      return `<div class="activity-row"><span class="activity-date">${label}</span><span class="activity-text ${ev.kind}">${ev.text}</span></div>`;
+      let text, cls;
+      if(ev.action === 'add'){
+        text = (ev.direction==='lent' ? `Lent ${fmt(ev.amount)} to ${ev.person}` : `Borrowed ${fmt(ev.amount)} from ${ev.person}`) + (ev.note?' — '+ev.note:'');
+        cls = 'lend';
+      } else if(ev.action === 'repay'){
+        text = (ev.direction==='lent' ? `${ev.person} repaid ${fmt(ev.amount)}` : `You repaid ${fmt(ev.amount)} to ${ev.person}`) + (ev.note?' ('+ev.note+')':'');
+        cls = 'repay';
+      } else if(ev.action === 'closed'){
+        text = `${ev.person} — fully settled`;
+        cls = 'closed';
+      } else if(ev.action === 'delete'){
+        text = `Entry for ${ev.person} (${fmt(ev.amount)}) deleted`;
+        cls = 'deleted';
+      }
+      return `<div class="activity-row"><span class="activity-date">${label}</span><span class="activity-text ${cls}">${text}</span></div>`;
     }).join('');
   }
+
 
   /* ---------- Reports tab ---------- */
   function renderTrendChart(){
