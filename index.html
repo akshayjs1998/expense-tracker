@@ -407,6 +407,18 @@
     </section>
 
     <section class="block">
+      <div class="section-title">Monthly spending limit</div>
+      <div class="bar-track" style="height:9px; margin-bottom:8px;"><div class="bar-fill" id="totalLimitBarFill" style="height:100%;"></div></div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span id="totalLimitSpentLbl" style="font-family:'IBM Plex Mono',monospace; font-size:12.5px;">₹0 spent</span>
+        <span style="display:flex; align-items:center; gap:4px; font-size:12.5px; color:var(--ink-soft);">
+          of ₹<input type="number" class="budget-input" id="totalLimitInput" min="0" step="1" placeholder="auto" style="width:78px; font-size:12.5px;">
+        </span>
+      </div>
+      <div id="totalLimitNote" style="font-size:10.5px; color:var(--ink-soft); margin-top:7px;"></div>
+    </section>
+
+    <section class="block">
       <div class="section-title">Category budgets</div>
       <div id="catBreakdown"></div>
     </section>
@@ -600,7 +612,7 @@
   const DEFAULT_EXPENSE_CATS = ["Food","Transport","Utilities","Rent/EMI","Shopping","Health","Entertainment","Savings/Investment","Business","Other"];
   const DEFAULT_INCOME_CATS = ["Business Income","Salary/Drawings","Investment Returns","Rental Income","Freelance","Other Income"];
 
-  let data = { expenseCategories: [...DEFAULT_EXPENSE_CATS], incomeCategories: [...DEFAULT_INCOME_CATS], budgets: {}, entries: [], loans: [], loanLog: [] };
+  let data = { expenseCategories: [...DEFAULT_EXPENSE_CATS], incomeCategories: [...DEFAULT_INCOME_CATS], budgets: {}, entries: [], loans: [], loanLog: [], totalBudgetOverride: 0 };
   let currentMonth = new Date(); currentMonth.setDate(1);
   let currentType = 'expense';
   let selectedCategory = null;
@@ -661,6 +673,7 @@
           data.entries = p.entries || [];
           data.loans = (p.loans || []).map(l => ({ direction:'lent', kind:'person', settledLogged:false, ...l }));
           data.loanLog = p.loanLog || [];
+          data.totalBudgetOverride = Number(p.totalBudgetOverride) || 0;
         } else if(p.expenses){
           // migrate old expense-only shape
           data.expenseCategories = (p.categories && p.categories.length) ? p.categories : DEFAULT_EXPENSE_CATS;
@@ -683,6 +696,19 @@
     const out = {};
     list.forEach(x => { out[x.category] = (out[x.category]||0) + Number(x.amount); });
     return out;
+  }
+  function savingsAmount(expenseList){
+    return expenseList.filter(x => x.category === 'Savings/Investment').reduce((s,x)=>s+Number(x.amount),0);
+  }
+  function trueNet(expenseList, totalInc, totalExp){
+    return totalInc - totalExp + savingsAmount(expenseList);
+  }
+  function getCategoryBudgetSum(){
+    return data.expenseCategories.reduce((s,c)=>s+(Number(data.budgets[c])||0),0);
+  }
+  function getTotalBudget(){
+    const override = Number(data.totalBudgetOverride) || 0;
+    return override > 0 ? override : getCategoryBudgetSum();
   }
 
   /* ---------- Tabs ---------- */
@@ -843,15 +869,50 @@
     const key = monthKey(currentMonth);
     const exp = entriesForMonth(key,'expense');
     const inc = entriesForMonth(key,'income');
-    const totalExp = sumAmt(exp), totalInc = sumAmt(inc), net = totalInc - totalExp;
+    const totalExp = sumAmt(exp), totalInc = sumAmt(inc);
+    const net = trueNet(exp, totalInc, totalExp);
     document.getElementById('statIncome').textContent = fmt(totalInc);
     document.getElementById('statExpense').textContent = fmt(totalExp);
     const netEl = document.getElementById('statNet');
     netEl.textContent = (net<0?'−':'') + fmt(net);
     netEl.className = 'value ' + (net<0?'neg':'pos');
     renderDonut(categorySpend(exp), data.expenseCategories);
+    renderTotalLimit(totalExp);
     renderCatBreakdown(categorySpend(exp));
   }
+
+  function renderTotalLimit(totalExp){
+    const totalBudget = getTotalBudget();
+    const input = document.getElementById('totalLimitInput');
+    if(document.activeElement !== input){
+      input.value = data.totalBudgetOverride ? data.totalBudgetOverride : '';
+    }
+    const ratio = totalBudget > 0 ? totalExp / totalBudget : 0;
+    let color = 'var(--ink-soft)';
+    if(totalBudget > 0){
+      if(ratio > 1) color = 'var(--brick)';
+      else if(ratio >= 0.8) color = 'var(--amber)';
+      else color = 'var(--moss)';
+    }
+    document.getElementById('totalLimitBarFill').style.width = (totalBudget>0 ? Math.min(ratio,1)*100 : 0) + '%';
+    document.getElementById('totalLimitBarFill').style.background = color;
+    document.getElementById('totalLimitSpentLbl').textContent = fmt(totalExp) + ' spent';
+    const noteEl = document.getElementById('totalLimitNote');
+    if(totalBudget <= 0){
+      noteEl.textContent = 'Set category budgets above, or type a number here, to track an overall limit.';
+    } else if(!data.totalBudgetOverride){
+      noteEl.textContent = `Auto-totalled from your category budgets (${fmt(totalBudget)}) — type a number to set your own limit instead.`;
+    } else if(ratio > 1){
+      noteEl.textContent = `${fmt(totalExp-totalBudget)} over your ${fmt(totalBudget)} limit this month.`;
+    } else {
+      noteEl.textContent = `${fmt(totalBudget-totalExp)} left of your ${fmt(totalBudget)} limit this month.`;
+    }
+  }
+  document.getElementById('totalLimitInput').addEventListener('change', async (e) => {
+    data.totalBudgetOverride = Number(e.target.value) || 0;
+    await saveData();
+    renderOverview();
+  });
 
   /* ---------- History tab ---------- */
   document.querySelectorAll('.filter-chips button').forEach(b => {
@@ -1478,7 +1539,8 @@
   function renderSummaryReport(){
     const key = monthKey(currentMonth);
     const exp = entriesForMonth(key,'expense'), inc = entriesForMonth(key,'income');
-    const totalExp = sumAmt(exp), totalInc = sumAmt(inc), net = totalInc-totalExp;
+    const totalExp = sumAmt(exp), totalInc = sumAmt(inc);
+    const net = trueNet(exp, totalInc, totalExp);
     const rate = totalInc>0 ? (net/totalInc*100) : null;
     document.getElementById('summaryCard').innerHTML = `
       <div class="report-row"><span>Income</span><span class="val pos">${fmt(totalInc)}</span></div>
@@ -1554,7 +1616,7 @@
     const exp = entriesForMonth(key,'expense'), inc = entriesForMonth(key,'income');
     const spendMap = categorySpend(exp);
     const totalExp = sumAmt(exp), totalInc = sumAmt(inc);
-    const totalBudget = data.expenseCategories.reduce((s,c)=>s+(Number(data.budgets[c])||0),0);
+    const totalBudget = getTotalBudget();
     const items = [];
 
     const overdueCount = data.loans.filter(l => l.direction==='borrowed').reduce((s,l) =>
@@ -1579,7 +1641,7 @@
     if(totalInc === 0 && totalExp > 0){
       items.push({level:'note', text:`No income logged this month — add it to see your real savings rate.`});
     } else if(totalInc > 0){
-      const net = totalInc - totalExp;
+      const net = trueNet(exp, totalInc, totalExp);
       const rate = net/totalInc*100;
       if(net < 0) items.push({level:'alert', text:`Spending exceeded income by ${fmt(Math.abs(net))} this month.`});
       else if(rate < 20) items.push({level:'note', text:`Savings rate is ${Math.round(rate)}% this month — many budgeting guides suggest aiming for at least 20%.`});
@@ -1682,6 +1744,7 @@
         data.entries = parsed.entries || [];
         data.loans = (parsed.loans || []).map(l => ({ direction:'lent', kind:'person', settledLogged:false, ...l }));
         data.loanLog = parsed.loanLog || [];
+        data.totalBudgetOverride = Number(parsed.totalBudgetOverride) || 0;
         await saveData();
         showToast('Backup restored');
         location.reload();
