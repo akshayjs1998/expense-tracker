@@ -261,7 +261,29 @@
     padding:7px 2px; font-size:14px; font-family:'Inter',sans-serif; color:var(--ink);
   }
   .new-loan-form input:focus{ outline:none; border-bottom-color:var(--slate); }
+  .checkbox-row{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink); cursor:pointer; }
+  .checkbox-row input{ width:auto; }
+  .new-loan-form select{
+    width:100%; border:none; border-bottom:1.5px solid var(--rule); background:transparent;
+    padding:7px 2px; font-size:14px; font-family:'Inter',sans-serif; color:var(--ink);
+  }
   .submit-btn.lend{ background:var(--slate); }
+
+  .inst-list{ margin-bottom:10px; }
+  .inst-row{ display:flex; align-items:center; justify-content:space-between; padding:7px 0; border-bottom:1px dotted var(--rule); gap:8px; }
+  .inst-row:last-child{ border-bottom:none; }
+  .inst-title{ font-size:12.5px; font-weight:600; }
+  .inst-sub{ font-size:11px; color:var(--ink-soft); }
+  .inst-badge{ font-size:10px; font-weight:600; padding:3px 8px; border-radius:10px; white-space:nowrap; }
+  .inst-badge.paid{ background:rgba(76,107,79,0.15); color:var(--moss-deep); }
+  .inst-badge.overdue{ background:rgba(156,61,46,0.15); color:var(--brick); }
+  .inst-badge.upcoming{ background:var(--paper-alt); color:var(--ink-soft); }
+  .inst-pay-btn{ background:var(--moss); color:#F5F3EB; border:none; border-radius:6px; padding:5px 10px; font-size:11px; font-weight:600; cursor:pointer; white-space:nowrap; font-family:'Inter',sans-serif; }
+
+  .activity-row{ display:flex; gap:10px; padding:7px 0; border-bottom:1px dotted var(--rule-soft); font-size:12.5px; }
+  .activity-row:last-child{ border-bottom:none; }
+  .activity-date{ color:var(--ink-soft); width:38px; flex-shrink:0; font-size:11px; padding-top:1px; }
+  .activity-text.repay{ color:var(--moss-deep); }
 
   .loan-card{ background:var(--card); border-radius:12px; padding:14px; margin-bottom:12px; }
   .loan-card.settled{ opacity:0.6; }
@@ -389,10 +411,31 @@
         <label>Note (optional)</label>
         <input type="text" id="loanNote" placeholder="What's it for?" maxlength="60">
       </div>
+      <div class="field-row">
+        <label class="checkbox-row"><input type="checkbox" id="loanInstallToggle"> Split into installments</label>
+      </div>
+      <div class="installment-fields" id="installmentFields" style="display:none;">
+        <div class="field-row">
+          <label>Number of installments</label>
+          <input type="number" id="loanInstallCount" min="2" max="24" value="3">
+        </div>
+        <div class="field-row">
+          <label>Frequency</label>
+          <select id="loanInstallFreq">
+            <option value="monthly">Monthly</option>
+            <option value="weekly">Weekly</option>
+          </select>
+        </div>
+      </div>
       <button type="button" class="submit-btn lend" id="submitLoan">Add loan</button>
     </div>
 
     <div id="loansList"></div>
+
+    <section class="block">
+      <div class="section-title">Activity</div>
+      <div id="loanActivity"></div>
+    </section>
   </div>
 
   <!-- HISTORY TAB -->
@@ -747,6 +790,10 @@
     }
   });
 
+  document.getElementById('loanInstallToggle').addEventListener('change', (e) => {
+    document.getElementById('installmentFields').style.display = e.target.checked ? 'block' : 'none';
+  });
+
   function populatePersonList(){
     const dl = document.getElementById('personList');
     const names = [...new Set(data.loans.map(l => l.person))];
@@ -762,17 +809,59 @@
       showToast(!person ? 'Enter a name first' : 'Enter an amount first');
       return;
     }
+    let installments = [];
+    if(document.getElementById('loanInstallToggle').checked){
+      const count = Math.max(2, Number(document.getElementById('loanInstallCount').value) || 3);
+      const freq = document.getElementById('loanInstallFreq').value;
+      const base = Math.round((amount/count)*100)/100;
+      let allocated = 0;
+      for(let i=1; i<=count; i++){
+        const instAmt = (i===count) ? Math.round((amount-allocated)*100)/100 : base;
+        allocated += instAmt;
+        const due = new Date(date+'T00:00:00');
+        if(freq === 'weekly') due.setDate(due.getDate() + 7*i);
+        else due.setMonth(due.getMonth() + i);
+        installments.push({
+          id: Date.now()+i, seq:i, total:count, amount: instAmt,
+          dueDate: due.getFullYear()+'-'+String(due.getMonth()+1).padStart(2,'0')+'-'+String(due.getDate()).padStart(2,'0'),
+          paid:false, paidDate:null
+        });
+      }
+    }
     const id = Date.now();
-    data.loans.push({ id, person, amount, date, note, repayments: [] });
+    data.loans.push({ id, person, amount, date, note, repayments: [], installments });
     await saveData();
     document.getElementById('loanPerson').value = '';
     document.getElementById('loanAmount').value = '';
     document.getElementById('loanNote').value = '';
+    document.getElementById('loanInstallToggle').checked = false;
+    document.getElementById('installmentFields').style.display = 'none';
     document.getElementById('newLoanForm').classList.remove('open');
     expandedLoanId = id;
     showToast('Lent ' + fmt(amount) + ' to ' + person);
     renderLend();
   });
+
+  function renderInstallmentRows(loan){
+    if(!loan.installments || loan.installments.length === 0) return '';
+    const rows = loan.installments.map(inst => {
+      const status = inst.paid ? 'paid' : (inst.dueDate < todayStr() ? 'overdue' : 'upcoming');
+      const dd = new Date(inst.dueDate+'T00:00:00');
+      const label = dd.toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+      const badge = status==='paid' ? '<span class="inst-badge paid">Paid</span>'
+        : status==='overdue' ? '<span class="inst-badge overdue">Overdue</span>'
+        : '<span class="inst-badge upcoming">Upcoming</span>';
+      return `<div class="inst-row">
+        <div class="inst-main">
+          <div class="inst-title">Stage ${inst.seq} of ${inst.total}</div>
+          <div class="inst-sub">Due ${label} · ${fmt(inst.amount)}</div>
+        </div>
+        ${badge}
+        ${!inst.paid ? `<button type="button" class="inst-pay-btn" data-loan="${loan.id}" data-inst="${inst.id}">Mark paid</button>` : ''}
+      </div>`;
+    }).join('');
+    return `<div class="inst-list">${rows}</div>`;
+  }
 
   function renderLend(){
     const totalOut = data.loans.reduce((s,l)=>s+loanOutstanding(l),0);
@@ -805,6 +894,7 @@
           <span><span class="amt">+${fmt(r.amount)}</span> <button class="del-btn" data-loan="${loan.id}" data-repay="${r.id}">✕</button></span>
         </div>`;
       }).join('') || '<div class="repay-row"><span style="color:var(--ink-soft); font-style:italic;">No repayments yet</span></div>';
+      const instRows = renderInstallmentRows(loan);
 
       return `<div class="loan-card ${settled?'settled':''}">
         <div class="loan-top" data-toggle="${loan.id}">
@@ -819,6 +909,7 @@
         <div class="loan-bar"><div class="loan-bar-fill" style="width:${pct}%"></div></div>
         <div class="loan-detail ${isOpen?'open':''}" id="loan-detail-${loan.id}">
           <div style="font-size:11px; color:var(--ink-soft); margin-bottom:6px;">Lent ${fmt(loan.amount)} · Repaid ${fmt(repaid)}</div>
+          ${instRows}
           ${repayRows}
           ${!settled ? `
           <div class="repay-form">
@@ -848,9 +939,26 @@
         const loan = data.loans.find(l => l.id === loanId);
         if(!loan) return;
         loan.repayments = loan.repayments || [];
-        loan.repayments.push({ id: Date.now(), amount: amt, date: dateInput.value || todayStr() });
+        loan.repayments.push({ id: Date.now(), amount: amt, date: dateInput.value || todayStr(), instId: null });
         await saveData();
         showToast('Repayment of ' + fmt(amt) + ' logged');
+        renderLend();
+      });
+    });
+    box.querySelectorAll('.inst-pay-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const loanId = Number(e.currentTarget.dataset.loan);
+        const instId = Number(e.currentTarget.dataset.inst);
+        const loan = data.loans.find(l => l.id === loanId);
+        if(!loan) return;
+        const inst = (loan.installments||[]).find(i => i.id === instId);
+        if(!inst) return;
+        inst.paid = true;
+        inst.paidDate = todayStr();
+        loan.repayments = loan.repayments || [];
+        loan.repayments.push({ id: Date.now(), amount: inst.amount, date: todayStr(), note: `Stage ${inst.seq} of ${inst.total}`, instId: inst.id });
+        await saveData();
+        showToast('Stage ' + inst.seq + ' marked paid');
         renderLend();
       });
     });
@@ -860,7 +968,12 @@
         const repayId = Number(e.currentTarget.dataset.repay);
         const loan = data.loans.find(l => l.id === loanId);
         if(!loan) return;
+        const removed = (loan.repayments||[]).find(r => r.id === repayId);
         loan.repayments = (loan.repayments||[]).filter(r => r.id !== repayId);
+        if(removed && removed.instId){
+          const inst = (loan.installments||[]).find(i => i.id === removed.instId);
+          if(inst){ inst.paid = false; inst.paidDate = null; }
+        }
         await saveData();
         renderLend();
       });
@@ -874,6 +987,26 @@
         renderLend();
       });
     });
+    renderLoanActivity();
+  }
+
+  function renderLoanActivity(){
+    const box = document.getElementById('loanActivity');
+    if(!box) return;
+    const events = [];
+    data.loans.forEach(loan => {
+      events.push({ date: loan.date, text: `Lent ${fmt(loan.amount)} to ${loan.person}${loan.note?' — '+loan.note:''}`, kind:'lend' });
+      (loan.repayments||[]).forEach(r => {
+        events.push({ date: r.date, text: `${loan.person} repaid ${fmt(r.amount)}${r.note?' ('+r.note+')':''}`, kind:'repay' });
+      });
+    });
+    if(events.length === 0){ box.innerHTML = ''; return; }
+    events.sort((a,b) => b.date.localeCompare(a.date));
+    box.innerHTML = events.slice(0,25).map(ev => {
+      const d = new Date(ev.date+'T00:00:00');
+      const label = d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+      return `<div class="activity-row"><span class="activity-date">${label}</span><span class="activity-text ${ev.kind}">${ev.text}</span></div>`;
+    }).join('');
   }
 
   /* ---------- Reports tab ---------- */
