@@ -434,33 +434,53 @@
         <input type="text" id="loanPerson" list="personList" placeholder="Who's it for?" maxlength="40">
         <datalist id="personList"></datalist>
       </div>
-      <div class="field-row">
-        <label>Amount ₹</label>
-        <input type="number" id="loanAmount" min="0" step="0.01" placeholder="0" inputmode="decimal">
-      </div>
-      <div class="field-row">
-        <label>Date</label>
-        <input type="date" id="loanDate">
-      </div>
-      <div class="field-row">
-        <label>Note (optional)</label>
-        <input type="text" id="loanNote" placeholder="What's it for?" maxlength="60">
-      </div>
-      <div class="field-row">
-        <label class="checkbox-row"><input type="checkbox" id="loanInstallToggle"> Split into installments</label>
-      </div>
-      <div class="installment-fields" id="installmentFields" style="display:none;">
+
+      <!-- Person fields: simple, freeform repayment -->
+      <div id="personFieldGroup">
         <div class="field-row">
-          <label>Number of installments</label>
-          <input type="number" id="loanInstallCount" min="2" max="60" value="3">
+          <label>Amount ₹</label>
+          <input type="number" id="loanAmount" min="0" step="0.01" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="field-row">
+          <label>Date</label>
+          <input type="date" id="loanDate">
+        </div>
+        <div class="field-row">
+          <label>Already repaid so far ₹ (optional)</label>
+          <input type="number" id="loanAlreadyRepaid" min="0" step="0.01" placeholder="0" inputmode="decimal">
+        </div>
+      </div>
+
+      <!-- Loan/EMI/Chit fields: fixed schedule, supports adding an existing one mid-way -->
+      <div id="loanFieldGroup" style="display:none;">
+        <div class="field-row">
+          <label>EMI / installment amount ₹</label>
+          <input type="number" id="emiAmount" min="0" step="0.01" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="field-row">
+          <label>Total number of installments</label>
+          <input type="number" id="emiCount" min="1" max="360" value="12">
+        </div>
+        <div class="field-row">
+          <label>Already paid (if this loan is already running)</label>
+          <input type="number" id="emiAlreadyPaid" min="0" value="0">
+        </div>
+        <div class="field-row">
+          <label>Next due date</label>
+          <input type="date" id="emiNextDue">
         </div>
         <div class="field-row">
           <label>Frequency</label>
-          <select id="loanInstallFreq">
+          <select id="emiFreq">
             <option value="monthly">Monthly</option>
             <option value="weekly">Weekly</option>
           </select>
         </div>
+      </div>
+
+      <div class="field-row">
+        <label>Note (optional)</label>
+        <input type="text" id="loanNote" placeholder="What's it for?" maxlength="60">
       </div>
       <button type="button" class="submit-btn lend" id="submitLoan">Add loan</button>
     </div>
@@ -857,28 +877,38 @@
     if(creditDirection === 'lent'){
       l1.textContent = 'Owed to you';
       l2.textContent = 'Repaid to you';
-      btn.textContent = 'Add loan';
       btn.classList.remove('borrowed');
       toggle.classList.remove('is-borrow');
       toggle.textContent = '+ New loan';
     } else {
       l1.textContent = 'You owe';
       l2.textContent = "You've repaid";
-      btn.textContent = 'Add entry';
       btn.classList.add('borrowed');
       toggle.classList.add('is-borrow');
       toggle.textContent = '+ New entry';
     }
     document.querySelectorAll('.stat-card.lend').forEach(c => c.classList.toggle('borrow', creditDirection==='borrowed'));
     document.getElementById('kindFieldRow').style.display = creditDirection === 'borrowed' ? '' : 'none';
-    updatePersonFieldLabel();
+    if(creditDirection === 'lent' && selectedKind !== 'person'){
+      selectedKind = 'person';
+      document.querySelectorAll('.kind-chip').forEach(x => x.classList.toggle('selected', x.dataset.kind==='person'));
+    }
+    updateFieldGroups();
   }
 
-  function updatePersonFieldLabel(){
+  function updateFieldGroups(){
     const label = document.getElementById('personFieldLabel');
-    if(creditDirection === 'lent'){ label.textContent = 'Person'; return; }
-    const map = { person:'Person', loan:'Lender / Bank', chit:'Chit group' };
-    label.textContent = map[selectedKind] || 'Person';
+    const btn = document.getElementById('submitLoan');
+    const isStructured = creditDirection === 'borrowed' && (selectedKind === 'loan' || selectedKind === 'chit');
+    document.getElementById('personFieldGroup').style.display = isStructured ? 'none' : 'block';
+    document.getElementById('loanFieldGroup').style.display = isStructured ? 'block' : 'none';
+    if(isStructured){
+      label.textContent = selectedKind === 'loan' ? 'Lender / Bank' : 'Chit group';
+      btn.textContent = 'Add ' + (selectedKind === 'loan' ? 'loan' : 'chit');
+    } else {
+      label.textContent = 'Person';
+      btn.textContent = creditDirection === 'lent' ? 'Add loan' : 'Add entry';
+    }
   }
 
   document.querySelectorAll('#creditToggle button').forEach(b => {
@@ -895,7 +925,7 @@
     b.addEventListener('click', () => {
       selectedKind = b.dataset.kind;
       document.querySelectorAll('.kind-chip').forEach(x => x.classList.toggle('selected', x===b));
-      updatePersonFieldLabel();
+      updateFieldGroups();
     });
   });
 
@@ -904,12 +934,9 @@
     form.classList.toggle('open');
     if(form.classList.contains('open')){
       document.getElementById('loanDate').value = todayStr();
+      document.getElementById('emiNextDue').value = todayStr();
       populatePersonList();
     }
-  });
-
-  document.getElementById('loanInstallToggle').addEventListener('change', (e) => {
-    document.getElementById('installmentFields').style.display = e.target.checked ? 'block' : 'none';
   });
 
   function populatePersonList(){
@@ -918,48 +945,80 @@
     dl.innerHTML = names.map(n => `<option value="${n}"></option>`).join('');
   }
 
-  document.getElementById('submitLoan').addEventListener('click', async () => {
-    const person = document.getElementById('loanPerson').value.trim();
-    const amount = Number(document.getElementById('loanAmount').value);
-    const date = document.getElementById('loanDate').value || todayStr();
-    const note = document.getElementById('loanNote').value.trim();
-    if(!person || !amount){
-      showToast(!person ? 'Enter a name first' : 'Enter an amount first');
-      return;
-    }
-    let installments = [];
-    if(document.getElementById('loanInstallToggle').checked){
-      const count = Math.max(2, Number(document.getElementById('loanInstallCount').value) || 3);
-      const freq = document.getElementById('loanInstallFreq').value;
-      const base = Math.round((amount/count)*100)/100;
-      let allocated = 0;
-      for(let i=1; i<=count; i++){
-        const instAmt = (i===count) ? Math.round((amount-allocated)*100)/100 : base;
-        allocated += instAmt;
-        const due = new Date(date+'T00:00:00');
-        if(freq === 'weekly') due.setDate(due.getDate() + 7*i);
-        else due.setMonth(due.getMonth() + i);
-        installments.push({
-          id: Date.now()+i, seq:i, total:count, amount: instAmt,
-          dueDate: due.getFullYear()+'-'+String(due.getMonth()+1).padStart(2,'0')+'-'+String(due.getDate()).padStart(2,'0'),
-          paid:false, paidDate:null
-        });
-      }
-    }
-    const id = Date.now();
-    const kind = creditDirection === 'borrowed' ? selectedKind : 'person';
-    const loan = { id, direction: creditDirection, kind, person, amount, date, note, repayments: [], installments, settledLogged:false };
-    data.loans.push(loan);
-    logEvent('add', loan);
-    await saveData();
+  function resetNewLoanForm(){
     document.getElementById('loanPerson').value = '';
     document.getElementById('loanAmount').value = '';
+    document.getElementById('loanAlreadyRepaid').value = '';
+    document.getElementById('emiAmount').value = '';
+    document.getElementById('emiCount').value = '12';
+    document.getElementById('emiAlreadyPaid').value = '0';
     document.getElementById('loanNote').value = '';
-    document.getElementById('loanInstallToggle').checked = false;
-    document.getElementById('installmentFields').style.display = 'none';
     document.getElementById('newLoanForm').classList.remove('open');
+  }
+
+  document.getElementById('submitLoan').addEventListener('click', async () => {
+    const person = document.getElementById('loanPerson').value.trim();
+    const note = document.getElementById('loanNote').value.trim();
+    const isStructured = creditDirection === 'borrowed' && (selectedKind === 'loan' || selectedKind === 'chit');
+    if(!person){ showToast('Enter a name first'); return; }
+
+    let loan;
+    const id = Date.now();
+
+    if(isStructured){
+      const emiAmt = Number(document.getElementById('emiAmount').value);
+      const count = Math.max(1, Number(document.getElementById('emiCount').value) || 1);
+      const alreadyPaid = Math.min(count, Math.max(0, Number(document.getElementById('emiAlreadyPaid').value) || 0));
+      const freq = document.getElementById('emiFreq').value;
+      const nextDue = document.getElementById('emiNextDue').value || todayStr();
+      if(!emiAmt){ showToast('Enter the EMI amount first'); return; }
+
+      const installments = [];
+      const repayments = [];
+      const nextDueDate = new Date(nextDue+'T00:00:00');
+      for(let i=1; i<=count; i++){
+        const seq = i;
+        const stepsFromNext = i - (alreadyPaid+1);
+        const due = new Date(nextDueDate);
+        if(freq === 'weekly') due.setDate(due.getDate() + 7*stepsFromNext);
+        else due.setMonth(due.getMonth() + stepsFromNext);
+        const dueStr = due.getFullYear()+'-'+String(due.getMonth()+1).padStart(2,'0')+'-'+String(due.getDate()).padStart(2,'0');
+        const paid = seq <= alreadyPaid;
+        installments.push({ id: Date.now()+i, seq, total:count, amount: emiAmt, dueDate: dueStr, paid, paidDate: paid ? dueStr : null });
+        if(paid) repayments.push({ id: Date.now()+i+1000, amount: emiAmt, date: dueStr, note: `Stage ${seq} of ${count} (already paid)`, instId: installments[installments.length-1].id });
+      }
+      const totalAmount = Math.round(emiAmt * count * 100) / 100;
+      loan = { id, direction:'borrowed', kind: selectedKind, person, amount: totalAmount, date: todayStr(), note, repayments, installments, settledLogged:false };
+      data.loans.push(loan);
+      logEvent('add', loan, { amount: totalAmount, note: `${alreadyPaid} of ${count} stages already paid` });
+      if(alreadyPaid > 0){
+        logEvent('repay', loan, { amount: Math.round(emiAmt*alreadyPaid*100)/100, date: todayStr(), note: `${alreadyPaid} existing stage(s) recorded at setup` });
+      }
+      checkAndLogClosed(loan);
+      await saveData();
+      showToast('Added ' + (selectedKind==='loan' ? 'loan' : 'chit') + ' for ' + person);
+    } else {
+      const amount = Number(document.getElementById('loanAmount').value);
+      const date = document.getElementById('loanDate').value || todayStr();
+      const alreadyRepaid = Number(document.getElementById('loanAlreadyRepaid').value) || 0;
+      if(!amount){ showToast('Enter an amount first'); return; }
+      const repayments = [];
+      if(alreadyRepaid > 0){
+        repayments.push({ id: Date.now()+1, amount: Math.min(alreadyRepaid, amount), date: todayStr(), note: 'Already repaid (recorded at setup)', instId: null });
+      }
+      loan = { id, direction: creditDirection, kind:'person', person, amount, date, note, repayments, installments: [], settledLogged:false };
+      data.loans.push(loan);
+      logEvent('add', loan);
+      if(alreadyRepaid > 0){
+        logEvent('repay', loan, { amount: Math.min(alreadyRepaid, amount), date: todayStr(), note: 'Already repaid (recorded at setup)' });
+      }
+      checkAndLogClosed(loan);
+      await saveData();
+      showToast((creditDirection==='lent' ? 'Lent ' : 'Borrowed ') + fmt(amount) + (creditDirection==='lent' ? ' to ' : ' from ') + person);
+    }
+
+    resetNewLoanForm();
     expandedLoanId = id;
-    showToast((creditDirection==='lent' ? 'Lent ' : 'Borrowed ') + fmt(amount) + (creditDirection==='lent' ? ' to ' : ' from ') + person);
     renderLend();
   });
 
