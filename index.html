@@ -280,11 +280,13 @@
   .chip.selected-person{ background:var(--slate); border-color:var(--slate); color:#F5F3EB; }
   .chip.selected-person.borrow{ background:var(--rust); border-color:var(--rust); }
 
-  .person-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--card); border-radius:10px; margin-bottom:8px; cursor:pointer; border:1.5px solid transparent; }
+  .person-row{ display:block; padding:10px 12px; background:var(--card); border-radius:10px; margin-bottom:8px; border:1.5px solid transparent; }
   .person-row.active-filter{ border-color:var(--slate); }
+  .person-row-top{ display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
   .person-row .name{ font-size:13.5px; font-weight:600; }
   .person-row .sub{ font-size:10.5px; color:var(--ink-soft); margin-top:2px; }
   .person-row .amt{ font-family:'IBM Plex Mono',monospace; font-size:13.5px; font-weight:600; }
+  .repay-person-btn{ background:none; border:1.5px solid var(--brass); color:var(--brass-deep); border-radius:6px; padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer; margin-top:8px; font-family:'Inter',sans-serif; }
   .clear-filter{ display:block; font-size:11.5px; color:var(--brass-deep); background:none; border:none; cursor:pointer; margin-bottom:10px; padding:0; }
 
   .loan-clearby{ font-size:10.5px; color:var(--ink-soft); margin-top:4px; }
@@ -520,6 +522,20 @@
     <div class="report-card" id="summaryCard"></div>
 
     <section class="block">
+      <div class="section-title">Lending &amp; borrowing</div>
+      <div class="report-card" id="creditSummaryCard"></div>
+      <div id="creditNextDue" style="font-size:11.5px; color:var(--ink-soft); margin-top:8px;"></div>
+    </section>
+
+    <section class="block">
+      <div class="section-title">Top balances</div>
+      <div style="font-size:11px; color:var(--ink-soft); margin-bottom:6px;">Owed to you</div>
+      <ul class="top-cats" id="topOwedToYou"></ul>
+      <div style="font-size:11px; color:var(--ink-soft); margin:14px 0 6px;">You owe</div>
+      <ul class="top-cats" id="topYouOwe"></ul>
+    </section>
+
+    <section class="block">
       <div class="section-title">6-month trend</div>
       <div class="trend-legend">
         <span><i style="background:var(--moss)"></i>Income</span>
@@ -594,6 +610,7 @@
   let selectedKind = 'person';
   let selectedPerson = null;
   let personFilter = null;
+  let payingPerson = null;
 
   function fmt(n){
     n = Math.round(n*100)/100;
@@ -1120,9 +1137,10 @@
     const people = {};
     list.forEach(l => {
       const out = loanOutstanding(l);
-      if(!people[l.person]) people[l.person] = { outstanding:0, count:0, nextDue:null };
+      if(!people[l.person]) people[l.person] = { outstanding:0, count:0, nextDue:null, hasPersonKind:false };
       people[l.person].outstanding += out;
       people[l.person].count += 1;
+      if((l.kind||'person') === 'person' && out > 0) people[l.person].hasPersonKind = true;
       (l.installments||[]).forEach(inst => {
         if(!inst.paid && (!people[l.person].nextDue || inst.dueDate < people[l.person].nextDue)){
           people[l.person].nextDue = inst.dueDate;
@@ -1130,27 +1148,85 @@
       });
     });
     const names = Object.keys(people);
-    if(names.length <= 1){ block.style.display = 'none'; box.innerHTML = ''; return; }
+    const worthGrouping = names.length > 1 || names.some(n => people[n].count > 1);
+    if(!worthGrouping){ block.style.display = 'none'; box.innerHTML = ''; payingPerson = null; return; }
     block.style.display = '';
     const sortedNames = names.sort((a,b) => people[b].outstanding - people[a].outstanding);
     const clearBtn = personFilter ? `<button type="button" class="clear-filter" id="clearPersonFilter">✕ Clear filter (${personFilter})</button>` : '';
     box.innerHTML = clearBtn + sortedNames.map(name => {
       const p = people[name];
       const dueTxt = p.nextDue ? ('Next due ' + new Date(p.nextDue+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'})) : (p.count+' entr'+(p.count===1?'y':'ies'));
+      const canRepay = p.hasPersonKind && p.outstanding > 0;
+      const isPaying = payingPerson === name;
       return `<div class="person-row ${personFilter===name?'active-filter':''}" data-person="${name}">
-        <div><div class="name">${name}</div><div class="sub">${dueTxt}</div></div>
-        <div class="amt">${p.outstanding>0?fmt(p.outstanding):'Settled'}</div>
+        <div class="person-row-top" data-filter-person="${name}">
+          <div><div class="name">${name}</div><div class="sub">${dueTxt}</div></div>
+          <div class="amt">${p.outstanding>0?fmt(p.outstanding):'Settled'}</div>
+        </div>
+        ${canRepay ? `<button type="button" class="repay-person-btn" data-repay-person="${name}">${isPaying ? 'Cancel' : 'Repay'}</button>` : ''}
+        ${isPaying ? `
+        <div class="repay-form" style="margin-top:8px;">
+          <input type="number" min="0" step="0.01" placeholder="₹0" id="personRepayAmt">
+          <input type="date" id="personRepayDate" value="${todayStr()}">
+          <button type="button" id="confirmPersonRepay" data-person="${name}">Record</button>
+        </div>
+        <div style="font-size:10.5px; color:var(--ink-soft); margin-top:6px;">Pays off ${name}'s oldest entry first, then rolls the rest into the next one.</div>` : ''}
       </div>`;
     }).join('');
-    box.querySelectorAll('.person-row').forEach(row => {
+    box.querySelectorAll('[data-filter-person]').forEach(row => {
       row.addEventListener('click', () => {
-        const name = row.dataset.person;
+        const name = row.dataset.filterPerson;
         personFilter = (personFilter===name) ? null : name;
         renderLend();
       });
     });
+    box.querySelectorAll('.repay-person-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const name = e.currentTarget.dataset.repayPerson;
+        payingPerson = (payingPerson === name) ? null : name;
+        renderPersonSummary(list);
+      });
+    });
+    const confirmBtn = document.getElementById('confirmPersonRepay');
+    if(confirmBtn){
+      confirmBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const name = e.currentTarget.dataset.person;
+        const amt = Number(document.getElementById('personRepayAmt').value);
+        const dateVal = document.getElementById('personRepayDate').value || todayStr();
+        if(!amt){ showToast('Enter an amount first'); return; }
+        const leftover = await repayPersonFIFO(name, amt, dateVal);
+        payingPerson = null;
+        if(leftover > 0){
+          showToast(`${fmt(amt-leftover)} applied — ${name} only owed that much, ${fmt(leftover)} left over`);
+        } else {
+          showToast(`${fmt(amt)} recorded for ${name}`);
+        }
+        renderLend();
+      });
+    }
     const cf = document.getElementById('clearPersonFilter');
     if(cf) cf.addEventListener('click', (e) => { e.stopPropagation(); personFilter = null; renderLend(); });
+  }
+
+  async function repayPersonFIFO(personName, amount, date){
+    const loans = data.loans
+      .filter(l => l.direction === creditDirection && l.person === personName && (l.kind||'person') === 'person' && loanOutstanding(l) > 0)
+      .sort((a,b) => a.date.localeCompare(b.date) || a.id - b.id);
+    let remaining = Math.round(amount * 100) / 100;
+    for(const loan of loans){
+      if(remaining <= 0) break;
+      const owed = loanOutstanding(loan);
+      const pay = Math.round(Math.min(remaining, owed) * 100) / 100;
+      loan.repayments = loan.repayments || [];
+      loan.repayments.push({ id: Date.now() + Math.floor(Math.random()*100000), amount: pay, date, note: '', instId: null });
+      logEvent('repay', loan, { amount: pay, date });
+      checkAndLogClosed(loan);
+      remaining = Math.round((remaining - pay) * 100) / 100;
+    }
+    await saveData();
+    return remaining;
   }
 
   function renderLend(){
@@ -1378,6 +1454,63 @@
     top.innerHTML = sorted.length ? sorted.map(([c,v]) => `<li><span>${c}</span><span class="amt">${fmt(v)}</span></li>`).join('') : '<li><span>No expenses logged yet this month</span></li>';
   }
 
+  function topBalances(direction){
+    const map = {};
+    data.loans.filter(l => l.direction === direction).forEach(l => {
+      const out = loanOutstanding(l);
+      if(out <= 0) return;
+      map[l.person] = (map[l.person] || 0) + out;
+    });
+    return Object.entries(map).sort((a,b) => b[1]-a[1]).slice(0,3);
+  }
+
+  function renderCreditSummary(){
+    const card = document.getElementById('creditSummaryCard');
+    if(!card) return;
+    const lentLoans = data.loans.filter(l => l.direction === 'lent');
+    const borrowedLoans = data.loans.filter(l => l.direction === 'borrowed');
+    const owedToYou = lentLoans.reduce((s,l) => s + loanOutstanding(l), 0);
+    const youOwe = borrowedLoans.reduce((s,l) => s + loanOutstanding(l), 0);
+    const net = owedToYou - youOwe;
+
+    const personBorrowed = borrowedLoans.filter(l => (l.kind||'person')==='person').reduce((s,l)=>s+loanOutstanding(l),0);
+    const emiOutstanding = borrowedLoans.filter(l => l.kind==='loan').reduce((s,l)=>s+loanOutstanding(l),0);
+    const chitOutstanding = borrowedLoans.filter(l => l.kind==='chit').reduce((s,l)=>s+loanOutstanding(l),0);
+
+    let breakdownRows = '';
+    if(personBorrowed>0) breakdownRows += `<div class="report-row"><span>— Personal borrowing</span><span class="val">${fmt(personBorrowed)}</span></div>`;
+    if(emiOutstanding>0) breakdownRows += `<div class="report-row"><span>— Bank loans / EMIs</span><span class="val">${fmt(emiOutstanding)}</span></div>`;
+    if(chitOutstanding>0) breakdownRows += `<div class="report-row"><span>— Chit funds</span><span class="val">${fmt(chitOutstanding)}</span></div>`;
+
+    card.innerHTML = `
+      <div class="report-row"><span>Owed to you</span><span class="val pos">${fmt(owedToYou)}</span></div>
+      <div class="report-row"><span>You owe</span><span class="val neg">${fmt(youOwe)}</span></div>
+      ${breakdownRows}
+      <div class="report-row total"><span>Net position</span><span class="val ${net<0?'neg':'pos'}">${net<0?'−':''}${fmt(Math.abs(net))}</span></div>`;
+
+    let nextDue = null, nextDueWho = null;
+    borrowedLoans.forEach(l => {
+      (l.installments||[]).forEach(inst => {
+        if(!inst.paid && (!nextDue || inst.dueDate < nextDue)){ nextDue = inst.dueDate; nextDueWho = l.person; }
+      });
+    });
+    const nextDueEl = document.getElementById('creditNextDue');
+    if(nextDueEl){
+      nextDueEl.textContent = nextDue
+        ? `Next EMI/chit due: ${new Date(nextDue+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})} (${nextDueWho})`
+        : '';
+    }
+
+    const topOwed = topBalances('lent');
+    const topOwe = topBalances('borrowed');
+    document.getElementById('topOwedToYou').innerHTML = topOwed.length
+      ? topOwed.map(([n,v]) => `<li><span>${n}</span><span class="amt">${fmt(v)}</span></li>`).join('')
+      : '<li><span>Nobody owes you right now</span></li>';
+    document.getElementById('topYouOwe').innerHTML = topOwe.length
+      ? topOwe.map(([n,v]) => `<li><span>${n}</span><span class="amt">${fmt(v)}</span></li>`).join('')
+      : "<li><span>You don't owe anyone right now</span></li>";
+  }
+
   function renderReportInsights(){
     const key = monthKey(currentMonth);
     const exp = entriesForMonth(key,'expense'), inc = entriesForMonth(key,'income');
@@ -1385,6 +1518,12 @@
     const totalExp = sumAmt(exp), totalInc = sumAmt(inc);
     const totalBudget = data.expenseCategories.reduce((s,c)=>s+(Number(data.budgets[c])||0),0);
     const items = [];
+
+    const overdueCount = data.loans.filter(l => l.direction==='borrowed').reduce((s,l) =>
+      s + (l.installments||[]).filter(i => !i.paid && i.dueDate < todayStr()).length, 0);
+    if(overdueCount > 0){
+      items.push({level:'alert', text:`${overdueCount} EMI/chit payment${overdueCount===1?'':'s'} overdue — check the Credit tab.`});
+    }
 
     data.expenseCategories.forEach(cat => {
       const spent = spendMap[cat]||0;
@@ -1441,6 +1580,7 @@
 
   function renderReports(){
     renderSummaryReport();
+    renderCreditSummary();
     renderTrendChart();
     renderReportInsights();
     renderBackupInfo();
