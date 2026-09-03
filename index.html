@@ -470,8 +470,9 @@
           <input type="number" id="emiCount" min="1" max="360" value="12">
         </div>
         <div class="field-row">
-          <label>Already paid (if this loan is already running)</label>
-          <input type="number" id="emiAlreadyPaid" min="0" value="0">
+          <label>Amount already paid so far ₹ (if this loan is already running)</label>
+          <input type="number" id="emiAlreadyPaidAmount" min="0" step="0.01" placeholder="0" inputmode="decimal">
+          <div id="emiAlreadyPaidPreview" style="font-size:10.5px; color:var(--ink-soft); margin-top:4px;"></div>
         </div>
         <div class="field-row">
           <label>Next due date</label>
@@ -753,7 +754,7 @@
     const amt = Number(document.getElementById('fAmount').value);
     const dateVal = document.getElementById('fDate').value;
     const noteVal = document.getElementById('fNote').value.trim();
-    if(!amt || !dateVal || !selectedCategory){
+    if(!(amt > 0) || !dateVal || !selectedCategory){
       if(!selectedCategory) showToast('Pick a category first');
       return;
     }
@@ -946,7 +947,6 @@
       selectedKind = 'person';
       document.querySelectorAll('.kind-chip').forEach(x => x.classList.toggle('selected', x.dataset.kind==='person'));
     }
-    selectedPerson = null;
     updateFieldGroups();
     renderPersonChips();
   }
@@ -977,7 +977,7 @@
       const isSel = name === selectedPerson;
       b.className = 'chip' + (isSel ? ' selected-person' + (creditDirection==='borrowed' ? ' borrow' : '') : '');
       b.textContent = name;
-      b.addEventListener('click', () => { selectedPerson = name; renderPersonChips(); });
+      b.addEventListener('click', () => { selectedPerson = name; document.getElementById('addPersonInline').style.display = 'none'; renderPersonChips(); });
       row.appendChild(b);
     });
     const addBtn = document.createElement('button');
@@ -1006,6 +1006,7 @@
       creditDirection = b.dataset.dir;
       document.querySelectorAll('#creditToggle button').forEach(x => x.classList.toggle('active', x===b));
       personFilter = null;
+      selectedPerson = null;
       updateCreditLabels();
       renderLend();
     });
@@ -1016,6 +1017,7 @@
       selectedKind = b.dataset.kind;
       document.querySelectorAll('.kind-chip').forEach(x => x.classList.toggle('selected', x===b));
       selectedPerson = null;
+      document.getElementById('addPersonInline').style.display = 'none';
       updateFieldGroups();
       renderPersonChips();
     });
@@ -1031,6 +1033,23 @@
     }
   });
 
+  function updateEmiPreview(){
+    const emiAmt = Number(document.getElementById('emiAmount').value) || 0;
+    const count = Math.round(Number(document.getElementById('emiCount').value)) || 0;
+    const paidAmount = Number(document.getElementById('emiAlreadyPaidAmount').value) || 0;
+    const el = document.getElementById('emiAlreadyPaidPreview');
+    if(!el) return;
+    if(emiAmt > 0 && paidAmount > 0){
+      const n = Math.min(count, Math.round(paidAmount / emiAmt));
+      el.textContent = `= ${n} of ${count || '?'} installment${n===1?'':'s'} already covered`;
+    } else {
+      el.textContent = '';
+    }
+  }
+  ['emiAmount','emiCount','emiAlreadyPaidAmount'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateEmiPreview);
+  });
+
   function resetNewLoanForm(){
     selectedPerson = null;
     document.getElementById('addPersonInline').style.display = 'none';
@@ -1038,7 +1057,8 @@
     document.getElementById('loanAlreadyRepaid').value = '';
     document.getElementById('emiAmount').value = '';
     document.getElementById('emiCount').value = '12';
-    document.getElementById('emiAlreadyPaid').value = '0';
+    document.getElementById('emiAlreadyPaidAmount').value = '';
+    updateEmiPreview();
     document.getElementById('loanNote').value = '';
     document.getElementById('newLoanForm').classList.remove('open');
     renderPersonChips();
@@ -1055,11 +1075,12 @@
 
     if(isStructured){
       const emiAmt = Number(document.getElementById('emiAmount').value);
-      const count = Math.max(1, Number(document.getElementById('emiCount').value) || 1);
-      const alreadyPaid = Math.min(count, Math.max(0, Number(document.getElementById('emiAlreadyPaid').value) || 0));
+      const count = Math.max(1, Math.round(Number(document.getElementById('emiCount').value)) || 1);
+      const paidAmount = Math.max(0, Number(document.getElementById('emiAlreadyPaidAmount').value) || 0);
       const freq = document.getElementById('emiFreq').value;
       const nextDue = document.getElementById('emiNextDue').value || todayStr();
-      if(!emiAmt){ showToast('Enter the EMI amount first'); return; }
+      if(!(emiAmt > 0)){ showToast('Enter the EMI amount first'); return; }
+      const alreadyPaid = Math.min(count, Math.round(paidAmount / emiAmt));
 
       const installments = [];
       const repayments = [];
@@ -1078,7 +1099,8 @@
       const totalAmount = Math.round(emiAmt * count * 100) / 100;
       loan = { id, direction:'borrowed', kind: selectedKind, person, amount: totalAmount, date: todayStr(), note, repayments, installments, settledLogged:false };
       data.loans.push(loan);
-      logEvent('add', loan, { amount: totalAmount, note: `${alreadyPaid} of ${count} stages already paid` });
+      const setupNote = alreadyPaid > 0 ? `${alreadyPaid} of ${count} stages already paid` : '';
+      logEvent('add', loan, { amount: totalAmount, note: (note && setupNote) ? `${note} — ${setupNote}` : (note || setupNote) });
       if(alreadyPaid > 0){
         logEvent('repay', loan, { amount: Math.round(emiAmt*alreadyPaid*100)/100, date: todayStr(), note: `${alreadyPaid} existing stage(s) recorded at setup` });
       }
@@ -1088,8 +1110,8 @@
     } else {
       const amount = Number(document.getElementById('loanAmount').value);
       const date = document.getElementById('loanDate').value || todayStr();
-      const alreadyRepaid = Number(document.getElementById('loanAlreadyRepaid').value) || 0;
-      if(!amount){ showToast('Enter an amount first'); return; }
+      const alreadyRepaid = Math.max(0, Number(document.getElementById('loanAlreadyRepaid').value) || 0);
+      if(!(amount > 0)){ showToast('Enter an amount first'); return; }
       const repayments = [];
       if(alreadyRepaid > 0){
         repayments.push({ id: Date.now()+1, amount: Math.min(alreadyRepaid, amount), date: todayStr(), note: 'Already repaid (recorded at setup)', instId: null });
@@ -1195,7 +1217,7 @@
         const name = e.currentTarget.dataset.person;
         const amt = Number(document.getElementById('personRepayAmt').value);
         const dateVal = document.getElementById('personRepayDate').value || todayStr();
-        if(!amt){ showToast('Enter an amount first'); return; }
+        if(!(amt > 0)){ showToast('Enter an amount first'); return; }
         const leftover = await repayPersonFIFO(name, amt, dateVal);
         payingPerson = null;
         if(leftover > 0){
@@ -1320,7 +1342,7 @@
         const amtInput = document.getElementById('repayAmt-'+loanId);
         const dateInput = document.getElementById('repayDate-'+loanId);
         const amt = Number(amtInput.value);
-        if(!amt) { showToast('Enter a repayment amount'); return; }
+        if(!(amt > 0)) { showToast('Enter a repayment amount'); return; }
         const loan = data.loans.find(l => l.id === loanId);
         if(!loan) return;
         loan.repayments = loan.repayments || [];
