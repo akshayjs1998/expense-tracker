@@ -29,6 +29,8 @@
     --moss-deep: #3B5A3E;
     --amber: #A9762F;
     --brick: #9C3D2E;
+    --slate: #4A5B6B;
+    --slate-deep: #38454F;
     --bezel: #23281F;
   }
   *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
@@ -244,10 +246,51 @@
   .add-cat-inline input{ flex:1; border:none; border-bottom:1px solid var(--rule); background:transparent; padding:6px 2px; font-size:13px; font-family:inherit; }
   .add-cat-inline button{ background:none; border:none; color:var(--brass-deep); font-size:13px; cursor:pointer; }
 
+  /* ---- Lend tab ---- */
+  .stat-card.lend .value{ color:var(--slate-deep); }
+  .new-loan-toggle{
+    width:100%; padding:11px 0; border-radius:10px; border:1.5px dashed var(--slate); background:none;
+    color:var(--slate-deep); font-size:13.5px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; margin-bottom:18px;
+  }
+  .new-loan-form{ background:var(--card); border-radius:12px; padding:14px; margin-bottom:18px; display:none; }
+  .new-loan-form.open{ display:block; }
+  .new-loan-form .field-row{ margin-bottom:12px; }
+  .new-loan-form .field-row:last-of-type{ margin-bottom:0; }
+  .new-loan-form input{
+    width:100%; border:none; border-bottom:1.5px solid var(--rule); background:transparent;
+    padding:7px 2px; font-size:14px; font-family:'Inter',sans-serif; color:var(--ink);
+  }
+  .new-loan-form input:focus{ outline:none; border-bottom-color:var(--slate); }
+  .submit-btn.lend{ background:var(--slate); }
+
+  .loan-card{ background:var(--card); border-radius:12px; padding:14px; margin-bottom:12px; }
+  .loan-card.settled{ opacity:0.6; }
+  .loan-top{ display:flex; justify-content:space-between; align-items:flex-start; cursor:pointer; }
+  .loan-person{ font-size:14.5px; font-weight:600; }
+  .loan-date{ font-size:11px; color:var(--ink-soft); margin-top:2px; }
+  .loan-outstanding{ text-align:right; }
+  .loan-outstanding .amt{ font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:600; color:var(--slate-deep); }
+  .loan-outstanding .lbl{ font-size:10px; color:var(--ink-soft); }
+  .settled-tag{ font-size:10px; color:var(--moss-deep); font-weight:600; }
+  .loan-bar{ height:6px; background:var(--paper-alt); border-radius:2px; overflow:hidden; margin-top:10px; }
+  .loan-bar-fill{ height:100%; background:var(--moss); border-radius:2px; transition:width 0.4s ease; }
+  .loan-detail{ display:none; margin-top:14px; padding-top:12px; border-top:1px dotted var(--rule); }
+  .loan-detail.open{ display:block; }
+  .repay-row{ display:flex; justify-content:space-between; align-items:center; padding:5px 0; font-size:12.5px; }
+  .repay-row .amt{ font-family:'IBM Plex Mono',monospace; color:var(--moss-deep); }
+  .repay-row .del-btn{ background:none; border:none; color:var(--ink-soft); font-size:11px; cursor:pointer; padding:2px 4px; }
+  .repay-form{ display:flex; gap:8px; margin-top:10px; align-items:flex-end; }
+  .repay-form input[type=number]{ width:70px; }
+  .repay-form input[type=date]{ flex:1; }
+  .repay-form input{ border:none; border-bottom:1.5px solid var(--rule); background:transparent; padding:6px 2px; font-size:13px; font-family:'Inter',sans-serif; color:var(--ink); }
+  .repay-form input:focus{ outline:none; border-bottom-color:var(--moss); }
+  .repay-form button{ background:var(--moss); color:#F5F3EB; border:none; border-radius:6px; padding:7px 12px; font-size:12px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; white-space:nowrap; }
+  .loan-delete-btn{ background:none; border:none; color:var(--brick); font-size:11.5px; cursor:pointer; margin-top:10px; font-family:'Inter',sans-serif; padding:0; }
+
   @media print{
     body{ background:#fff; padding:0; }
     .phone{ box-shadow:none; max-width:100%; max-height:none; border-radius:0; }
-    .topbar, .bottomnav, #tab-add, #tab-overview, #tab-history{ display:none !important; }
+    .topbar, .bottomnav, #tab-add, #tab-overview, #tab-lend, #tab-history{ display:none !important; }
     .screen{ overflow:visible; padding:20px; }
     .print-btn{ display:none; }
   }
@@ -258,7 +301,7 @@
 
   <div class="topbar">
     <h1>Ledger</h1>
-    <div class="month-nav">
+    <div class="month-nav" id="monthNavEl">
       <button id="prevMonth" aria-label="Previous month">‹</button>
       <span id="monthLabel">—</span>
       <button id="nextMonth" aria-label="Next month">›</button>
@@ -320,6 +363,38 @@
     </section>
   </div>
 
+  <!-- LEND TAB -->
+  <div class="screen" id="tab-lend">
+    <div class="stat-cards">
+      <div class="stat-card lend"><div class="label">Outstanding</div><div class="value" id="statLendOut">₹0</div></div>
+      <div class="stat-card lend"><div class="label">Repaid</div><div class="value" id="statLendRepaid">₹0</div></div>
+    </div>
+
+    <button type="button" class="new-loan-toggle" id="newLoanToggle">+ New loan</button>
+    <div class="new-loan-form" id="newLoanForm">
+      <div class="field-row">
+        <label>Person</label>
+        <input type="text" id="loanPerson" list="personList" placeholder="Who's it for?" maxlength="40">
+        <datalist id="personList"></datalist>
+      </div>
+      <div class="field-row">
+        <label>Amount ₹</label>
+        <input type="number" id="loanAmount" min="0" step="0.01" placeholder="0" inputmode="decimal">
+      </div>
+      <div class="field-row">
+        <label>Date</label>
+        <input type="date" id="loanDate">
+      </div>
+      <div class="field-row">
+        <label>Note (optional)</label>
+        <input type="text" id="loanNote" placeholder="What's it for?" maxlength="60">
+      </div>
+      <button type="button" class="submit-btn lend" id="submitLoan">Add loan</button>
+    </div>
+
+    <div id="loansList"></div>
+  </div>
+
   <!-- HISTORY TAB -->
   <div class="screen" id="tab-history">
     <div class="filter-chips">
@@ -366,6 +441,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
       <span>Overview</span>
     </button>
+    <button class="nav-btn" data-tab="lend">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      <span>Lend</span>
+    </button>
     <button class="nav-btn" data-tab="history">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/></svg>
       <span>History</span>
@@ -386,12 +465,13 @@
   const DEFAULT_EXPENSE_CATS = ["Food","Transport","Utilities","Rent/EMI","Shopping","Health","Entertainment","Savings/Investment","Business","Other"];
   const DEFAULT_INCOME_CATS = ["Business Income","Salary/Drawings","Investment Returns","Rental Income","Freelance","Other Income"];
 
-  let data = { expenseCategories: [...DEFAULT_EXPENSE_CATS], incomeCategories: [...DEFAULT_INCOME_CATS], budgets: {}, entries: [] };
+  let data = { expenseCategories: [...DEFAULT_EXPENSE_CATS], incomeCategories: [...DEFAULT_INCOME_CATS], budgets: {}, entries: [], loans: [] };
   let currentMonth = new Date(); currentMonth.setDate(1);
   let currentType = 'expense';
   let selectedCategory = null;
   let historyFilter = 'all';
   let newRowId = null;
+  let expandedLoanId = null;
 
   function fmt(n){
     n = Math.round(n*100)/100;
@@ -419,6 +499,7 @@
           data.incomeCategories = (p.incomeCategories && p.incomeCategories.length) ? p.incomeCategories : DEFAULT_INCOME_CATS;
           data.budgets = p.budgets || {};
           data.entries = p.entries || [];
+          data.loans = p.loans || [];
         } else if(p.expenses){
           // migrate old expense-only shape
           data.expenseCategories = (p.categories && p.categories.length) ? p.categories : DEFAULT_EXPENSE_CATS;
@@ -447,7 +528,9 @@
   function setTab(tab){
     document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'tab-'+tab));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.getElementById('monthNavEl').style.visibility = (tab === 'lend') ? 'hidden' : 'visible';
     if(tab === 'overview') renderOverview();
+    if(tab === 'lend') renderLend();
     if(tab === 'history') renderHistory();
     if(tab === 'reports') renderReports();
   }
@@ -649,6 +732,148 @@
       });
     });
     newRowId = null;
+  }
+
+  /* ---------- Lend tab ---------- */
+  function loanRepaid(loan){ return (loan.repayments||[]).reduce((s,r)=>s+Number(r.amount),0); }
+  function loanOutstanding(loan){ return Math.max(0, Number(loan.amount) - loanRepaid(loan)); }
+
+  document.getElementById('newLoanToggle').addEventListener('click', () => {
+    const form = document.getElementById('newLoanForm');
+    form.classList.toggle('open');
+    if(form.classList.contains('open')){
+      document.getElementById('loanDate').value = todayStr();
+      populatePersonList();
+    }
+  });
+
+  function populatePersonList(){
+    const dl = document.getElementById('personList');
+    const names = [...new Set(data.loans.map(l => l.person))];
+    dl.innerHTML = names.map(n => `<option value="${n}"></option>`).join('');
+  }
+
+  document.getElementById('submitLoan').addEventListener('click', async () => {
+    const person = document.getElementById('loanPerson').value.trim();
+    const amount = Number(document.getElementById('loanAmount').value);
+    const date = document.getElementById('loanDate').value || todayStr();
+    const note = document.getElementById('loanNote').value.trim();
+    if(!person || !amount){
+      showToast(!person ? 'Enter a name first' : 'Enter an amount first');
+      return;
+    }
+    const id = Date.now();
+    data.loans.push({ id, person, amount, date, note, repayments: [] });
+    await saveData();
+    document.getElementById('loanPerson').value = '';
+    document.getElementById('loanAmount').value = '';
+    document.getElementById('loanNote').value = '';
+    document.getElementById('newLoanForm').classList.remove('open');
+    expandedLoanId = id;
+    showToast('Lent ' + fmt(amount) + ' to ' + person);
+    renderLend();
+  });
+
+  function renderLend(){
+    const totalOut = data.loans.reduce((s,l)=>s+loanOutstanding(l),0);
+    const totalRepaid = data.loans.reduce((s,l)=>s+loanRepaid(l),0);
+    document.getElementById('statLendOut').textContent = fmt(totalOut);
+    document.getElementById('statLendRepaid').textContent = fmt(totalRepaid);
+
+    const box = document.getElementById('loansList');
+    if(data.loans.length === 0){
+      box.innerHTML = '<div class="empty-state">Nothing lent out yet. Add a loan above to start tracking it.</div>';
+      return;
+    }
+    const sorted = [...data.loans].sort((a,b) => {
+      const aOut = loanOutstanding(a), bOut = loanOutstanding(b);
+      if((aOut>0) !== (bOut>0)) return aOut>0 ? -1 : 1;
+      return b.date.localeCompare(a.date);
+    });
+    box.innerHTML = sorted.map(loan => {
+      const repaid = loanRepaid(loan);
+      const outstanding = loanOutstanding(loan);
+      const settled = outstanding <= 0;
+      const pct = loan.amount > 0 ? Math.min(100, (repaid/loan.amount)*100) : 0;
+      const d = new Date(loan.date+'T00:00:00');
+      const dateStr = d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+      const isOpen = loan.id === expandedLoanId;
+      const repayRows = (loan.repayments||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r => {
+        const rd = new Date(r.date+'T00:00:00');
+        return `<div class="repay-row">
+          <span>${rd.toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}${r.note?' — '+r.note:''}</span>
+          <span><span class="amt">+${fmt(r.amount)}</span> <button class="del-btn" data-loan="${loan.id}" data-repay="${r.id}">✕</button></span>
+        </div>`;
+      }).join('') || '<div class="repay-row"><span style="color:var(--ink-soft); font-style:italic;">No repayments yet</span></div>';
+
+      return `<div class="loan-card ${settled?'settled':''}">
+        <div class="loan-top" data-toggle="${loan.id}">
+          <div>
+            <div class="loan-person">${loan.person}</div>
+            <div class="loan-date">${dateStr}${loan.note?' · '+loan.note:''}</div>
+          </div>
+          <div class="loan-outstanding">
+            ${settled ? '<div class="settled-tag">Settled</div>' : `<div class="amt">${fmt(outstanding)}</div><div class="lbl">owed</div>`}
+          </div>
+        </div>
+        <div class="loan-bar"><div class="loan-bar-fill" style="width:${pct}%"></div></div>
+        <div class="loan-detail ${isOpen?'open':''}" id="loan-detail-${loan.id}">
+          <div style="font-size:11px; color:var(--ink-soft); margin-bottom:6px;">Lent ${fmt(loan.amount)} · Repaid ${fmt(repaid)}</div>
+          ${repayRows}
+          ${!settled ? `
+          <div class="repay-form">
+            <input type="number" min="0" step="0.01" placeholder="₹0" id="repayAmt-${loan.id}">
+            <input type="date" id="repayDate-${loan.id}" value="${todayStr()}">
+            <button type="button" data-repay-loan="${loan.id}">Add</button>
+          </div>` : ''}
+          <button class="loan-delete-btn" data-delete-loan="${loan.id}">Delete this loan</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    box.querySelectorAll('[data-toggle]').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = Number(el.dataset.toggle);
+        expandedLoanId = (expandedLoanId === id) ? null : id;
+        renderLend();
+      });
+    });
+    box.querySelectorAll('[data-repay-loan]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const loanId = Number(e.currentTarget.dataset.repayLoan);
+        const amtInput = document.getElementById('repayAmt-'+loanId);
+        const dateInput = document.getElementById('repayDate-'+loanId);
+        const amt = Number(amtInput.value);
+        if(!amt) { showToast('Enter a repayment amount'); return; }
+        const loan = data.loans.find(l => l.id === loanId);
+        if(!loan) return;
+        loan.repayments = loan.repayments || [];
+        loan.repayments.push({ id: Date.now(), amount: amt, date: dateInput.value || todayStr() });
+        await saveData();
+        showToast('Repayment of ' + fmt(amt) + ' logged');
+        renderLend();
+      });
+    });
+    box.querySelectorAll('.repay-row .del-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const loanId = Number(e.currentTarget.dataset.loan);
+        const repayId = Number(e.currentTarget.dataset.repay);
+        const loan = data.loans.find(l => l.id === loanId);
+        if(!loan) return;
+        loan.repayments = (loan.repayments||[]).filter(r => r.id !== repayId);
+        await saveData();
+        renderLend();
+      });
+    });
+    box.querySelectorAll('[data-delete-loan]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const loanId = Number(e.currentTarget.dataset.deleteLoan);
+        data.loans = data.loans.filter(l => l.id !== loanId);
+        await saveData();
+        expandedLoanId = null;
+        renderLend();
+      });
+    });
   }
 
   /* ---------- Reports tab ---------- */
