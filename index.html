@@ -277,6 +277,8 @@
   .submit-btn.lend{ background:var(--slate); }
   .submit-btn.lend.borrowed{ background:var(--rust); }
   .chip.kind-chip.selected{ background:var(--ink); border-color:var(--ink); color:#F5F3EB; }
+  .chip.selected-person{ background:var(--slate); border-color:var(--slate); color:#F5F3EB; }
+  .chip.selected-person.borrow{ background:var(--rust); border-color:var(--rust); }
 
   .person-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--card); border-radius:10px; margin-bottom:8px; cursor:pointer; border:1.5px solid transparent; }
   .person-row.active-filter{ border-color:var(--slate); }
@@ -337,6 +339,7 @@
     .topbar, .bottomnav, #tab-add, #tab-overview, #tab-lend, #tab-history{ display:none !important; }
     .screen{ overflow:visible; padding:20px; }
     .print-btn{ display:none; }
+    #backupInfo{ display:none; }
   }
 </style>
 </head>
@@ -431,8 +434,11 @@
       </div>
       <div class="field-row">
         <label id="personFieldLabel">Person</label>
-        <input type="text" id="loanPerson" list="personList" placeholder="Who's it for?" maxlength="40">
-        <datalist id="personList"></datalist>
+        <div class="chip-row" id="personChipRow"></div>
+        <div class="add-cat-inline" id="addPersonInline" style="display:none;">
+          <input type="text" id="newPersonInput" placeholder="Name" maxlength="40">
+          <button type="button" id="confirmAddPerson">Add</button>
+        </div>
       </div>
 
       <!-- Person fields: simple, freeform repayment -->
@@ -532,6 +538,14 @@
       <div class="insights" id="insightsBox"></div>
     </section>
 
+    <section class="block">
+      <div class="section-title">Backup</div>
+      <div id="backupInfo" style="font-size:12px; color:var(--ink-soft); margin-bottom:10px;">—</div>
+      <button type="button" class="print-btn" id="exportBackupBtn">Export backup (.json)</button>
+      <button type="button" class="print-btn" id="importBackupBtn" style="margin-top:8px;">Import backup</button>
+      <input type="file" id="importFileInput" accept="application/json" style="display:none;">
+    </section>
+
     <button type="button" class="print-btn" id="printBtn">Print report</button>
   </div>
 
@@ -564,6 +578,7 @@
 <script>
 (function(){
   const STORAGE_KEY = 'expense-ledger-data';
+  const BACKUP_KEY = 'expense-ledger-last-backup';
   const PALETTE = ['#A9835B','#4C6B4F','#9C3D2E','#A9762F','#4A5B6B','#6B4C5B','#6B6B3F','#8A5A45','#3F6B66','#7A6A8A','#5B7B95','#8A4A6B'];
   const DEFAULT_EXPENSE_CATS = ["Food","Transport","Utilities","Rent/EMI","Shopping","Health","Entertainment","Savings/Investment","Business","Other"];
   const DEFAULT_INCOME_CATS = ["Business Income","Salary/Drawings","Investment Returns","Rental Income","Freelance","Other Income"];
@@ -577,6 +592,7 @@
   let expandedLoanId = null;
   let creditDirection = 'lent';
   let selectedKind = 'person';
+  let selectedPerson = null;
   let personFilter = null;
 
   function fmt(n){
@@ -595,9 +611,29 @@
     showToast._h = setTimeout(()=> t.classList.remove('show'), 1600);
   }
 
+  const hasClaudeStorage = (typeof window.storage !== 'undefined') && window.storage && typeof window.storage.get === 'function';
+
+  async function storageGet(key){
+    if(hasClaudeStorage){
+      try{ return await window.storage.get(key, false); }catch(e){ return null; }
+    }
+    try{
+      const raw = localStorage.getItem(key);
+      return raw !== null ? { value: raw } : null;
+    }catch(e){ return null; }
+  }
+
+  async function storageSet(key, value){
+    if(hasClaudeStorage){
+      try{ return await window.storage.set(key, value, false); }catch(e){ return null; }
+    }
+    try{ localStorage.setItem(key, value); return true; }
+    catch(e){ return null; }
+  }
+
   async function loadData(){
     try{
-      const res = await window.storage.get(STORAGE_KEY, false);
+      const res = await storageGet(STORAGE_KEY);
       if(res && res.value){
         const p = JSON.parse(res.value);
         if(p.entries){
@@ -617,8 +653,8 @@
     }catch(e){ /* first run, defaults stand */ }
   }
   async function saveData(){
-    try{ await window.storage.set(STORAGE_KEY, JSON.stringify(data), false); }
-    catch(e){ console.error('save failed', e); }
+    const ok = await storageSet(STORAGE_KEY, JSON.stringify(data));
+    if(!ok) console.error('save failed');
   }
 
   function entriesForMonth(key, type){
@@ -893,7 +929,9 @@
       selectedKind = 'person';
       document.querySelectorAll('.kind-chip').forEach(x => x.classList.toggle('selected', x.dataset.kind==='person'));
     }
+    selectedPerson = null;
     updateFieldGroups();
+    renderPersonChips();
   }
 
   function updateFieldGroups(){
@@ -911,6 +949,41 @@
     }
   }
 
+  function renderPersonChips(){
+    const row = document.getElementById('personChipRow');
+    row.innerHTML = '';
+    const relevantKind = (creditDirection === 'borrowed') ? selectedKind : 'person';
+    const names = [...new Set(data.loans.filter(l => l.direction===creditDirection && (l.kind||'person')===relevantKind).map(l => l.person))];
+    names.forEach(name => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      const isSel = name === selectedPerson;
+      b.className = 'chip' + (isSel ? ' selected-person' + (creditDirection==='borrowed' ? ' borrow' : '') : '');
+      b.textContent = name;
+      b.addEventListener('click', () => { selectedPerson = name; renderPersonChips(); });
+      row.appendChild(b);
+    });
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'chip add-chip';
+    addBtn.textContent = '+ New';
+    addBtn.addEventListener('click', () => {
+      document.getElementById('addPersonInline').style.display = 'flex';
+      document.getElementById('newPersonInput').focus();
+    });
+    row.appendChild(addBtn);
+  }
+
+  document.getElementById('confirmAddPerson').addEventListener('click', () => {
+    const inp = document.getElementById('newPersonInput');
+    const val = inp.value.trim();
+    if(!val) return;
+    selectedPerson = val;
+    inp.value = '';
+    document.getElementById('addPersonInline').style.display = 'none';
+    renderPersonChips();
+  });
+
   document.querySelectorAll('#creditToggle button').forEach(b => {
     b.addEventListener('click', () => {
       creditDirection = b.dataset.dir;
@@ -925,7 +998,9 @@
     b.addEventListener('click', () => {
       selectedKind = b.dataset.kind;
       document.querySelectorAll('.kind-chip').forEach(x => x.classList.toggle('selected', x===b));
+      selectedPerson = null;
       updateFieldGroups();
+      renderPersonChips();
     });
   });
 
@@ -935,18 +1010,13 @@
     if(form.classList.contains('open')){
       document.getElementById('loanDate').value = todayStr();
       document.getElementById('emiNextDue').value = todayStr();
-      populatePersonList();
+      renderPersonChips();
     }
   });
 
-  function populatePersonList(){
-    const dl = document.getElementById('personList');
-    const names = [...new Set(data.loans.filter(l => l.direction===creditDirection).map(l => l.person))];
-    dl.innerHTML = names.map(n => `<option value="${n}"></option>`).join('');
-  }
-
   function resetNewLoanForm(){
-    document.getElementById('loanPerson').value = '';
+    selectedPerson = null;
+    document.getElementById('addPersonInline').style.display = 'none';
     document.getElementById('loanAmount').value = '';
     document.getElementById('loanAlreadyRepaid').value = '';
     document.getElementById('emiAmount').value = '';
@@ -954,13 +1024,14 @@
     document.getElementById('emiAlreadyPaid').value = '0';
     document.getElementById('loanNote').value = '';
     document.getElementById('newLoanForm').classList.remove('open');
+    renderPersonChips();
   }
 
   document.getElementById('submitLoan').addEventListener('click', async () => {
-    const person = document.getElementById('loanPerson').value.trim();
+    const person = selectedPerson;
     const note = document.getElementById('loanNote').value.trim();
     const isStructured = creditDirection === 'borrowed' && (selectedKind === 'loan' || selectedKind === 'chit');
-    if(!person){ showToast('Enter a name first'); return; }
+    if(!person){ showToast('Pick or add a name first'); return; }
 
     let loan;
     const id = Date.now();
@@ -1355,6 +1426,12 @@
         items.push({level:'note', text:`Nothing logged yet this month — add today's income and expenses to get started.`});
       }
     }
+    const hasAnyData = data.entries.length > 0 || data.loans.length > 0;
+    if(hasAnyData){
+      const backupDays = getLastBackupDays();
+      if(backupDays === null) items.push({level:'warn', text:`No backup taken yet — export a copy from the Backup section below so a lost phone or cleared cache can't wipe this out.`});
+      else if(backupDays >= 14) items.push({level:'warn', text:`Last backup was ${backupDays} days ago — export a fresh copy to stay safe.`});
+    }
     const order = {alert:0,warn:1,note:2,good:3};
     items.sort((a,b)=>order[a.level]-order[b.level]);
     document.getElementById('insightsBox').innerHTML = items.map(i =>
@@ -1366,9 +1443,77 @@
     renderSummaryReport();
     renderTrendChart();
     renderReportInsights();
+    renderBackupInfo();
   }
 
   document.getElementById('printBtn').addEventListener('click', () => window.print());
+
+  /* ---------- Backup ---------- */
+  function getLastBackupDays(){
+    try{
+      const raw = localStorage.getItem(BACKUP_KEY);
+      if(!raw) return null;
+      return Math.floor((Date.now() - Number(raw)) / 86400000);
+    }catch(e){ return null; }
+  }
+
+  function renderBackupInfo(){
+    const el = document.getElementById('backupInfo');
+    if(!el) return;
+    const days = getLastBackupDays();
+    el.textContent = days === null ? 'No backup taken yet — export one to be safe.'
+      : days === 0 ? 'Backed up today.'
+      : `Last backup: ${days} day${days===1?'':'s'} ago.`;
+  }
+
+  document.getElementById('exportBackupBtn').addEventListener('click', () => {
+    const payload = JSON.stringify(data, null, 2);
+    const blob = new Blob([payload], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ledger-backup-' + todayStr() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    try{ localStorage.setItem(BACKUP_KEY, Date.now().toString()); }catch(e){}
+    showToast('Backup downloaded — save it somewhere safe');
+    renderBackupInfo();
+  });
+
+  document.getElementById('importBackupBtn').addEventListener('click', () => {
+    document.getElementById('importFileInput').click();
+  });
+
+  document.getElementById('importFileInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try{
+        const parsed = JSON.parse(ev.target.result);
+        if(!parsed || (!parsed.entries && !parsed.loans)){
+          showToast("That file doesn't look like a valid backup");
+          return;
+        }
+        if(!confirm('This replaces all current data on this device with the backup. Continue?')) return;
+        data.expenseCategories = (parsed.expenseCategories && parsed.expenseCategories.length) ? parsed.expenseCategories : DEFAULT_EXPENSE_CATS;
+        data.incomeCategories = (parsed.incomeCategories && parsed.incomeCategories.length) ? parsed.incomeCategories : DEFAULT_INCOME_CATS;
+        data.budgets = parsed.budgets || {};
+        data.entries = parsed.entries || [];
+        data.loans = (parsed.loans || []).map(l => ({ direction:'lent', kind:'person', settledLogged:false, ...l }));
+        data.loanLog = parsed.loanLog || [];
+        await saveData();
+        showToast('Backup restored');
+        location.reload();
+      }catch(err){
+        showToast('Could not read that file');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
 
   /* ---------- Month nav ---------- */
   function renderMonthLabel(){ document.getElementById('monthLabel').textContent = monthLabel(currentMonth); }
