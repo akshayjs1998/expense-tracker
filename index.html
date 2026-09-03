@@ -899,6 +899,16 @@
   function loanRepaid(loan){ return (loan.repayments||[]).reduce((s,r)=>s+Number(r.amount),0); }
   function loanOutstanding(loan){ return Math.max(0, Number(loan.amount) - loanRepaid(loan)); }
 
+  function loanExpenseCategory(){
+    return data.expenseCategories.includes('Rent/EMI') ? 'Rent/EMI' : (data.expenseCategories[0] || 'Other');
+  }
+  function addLinkedExpense(loan, amount, date, note){
+    if(loan.kind !== 'loan' && loan.kind !== 'chit') return null;
+    const expId = Date.now() + Math.floor(Math.random()*100000);
+    data.entries.push({ id: expId, type:'expense', date, category: loanExpenseCategory(), amount, note: `${loan.person} — ${note}` });
+    return expId;
+  }
+
   function logEvent(action, loan, opts){
     opts = opts || {};
     data.loanLog.push({
@@ -1347,11 +1357,12 @@
         if(!loan) return;
         loan.repayments = loan.repayments || [];
         const repayDate = dateInput.value || todayStr();
-        loan.repayments.push({ id: Date.now(), amount: amt, date: repayDate, instId: null });
+        const expenseEntryId = addLinkedExpense(loan, amt, repayDate, 'EMI/chit payment');
+        loan.repayments.push({ id: Date.now(), amount: amt, date: repayDate, instId: null, expenseEntryId });
         logEvent('repay', loan, { amount: amt, date: repayDate });
         checkAndLogClosed(loan);
         await saveData();
-        showToast('Repayment of ' + fmt(amt) + ' logged');
+        showToast('Repayment of ' + fmt(amt) + ' logged' + (expenseEntryId ? ' and added to expenses' : ''));
         renderLend();
       });
     });
@@ -1366,11 +1377,13 @@
         inst.paid = true;
         inst.paidDate = todayStr();
         loan.repayments = loan.repayments || [];
-        loan.repayments.push({ id: Date.now(), amount: inst.amount, date: todayStr(), note: `Stage ${inst.seq} of ${inst.total}`, instId: inst.id });
-        logEvent('repay', loan, { amount: inst.amount, date: todayStr(), note: `Stage ${inst.seq} of ${inst.total}` });
+        const stageNote = `Stage ${inst.seq} of ${inst.total}`;
+        const expenseEntryId = addLinkedExpense(loan, inst.amount, todayStr(), stageNote);
+        loan.repayments.push({ id: Date.now(), amount: inst.amount, date: todayStr(), note: stageNote, instId: inst.id, expenseEntryId });
+        logEvent('repay', loan, { amount: inst.amount, date: todayStr(), note: stageNote });
         checkAndLogClosed(loan);
         await saveData();
-        showToast('Stage ' + inst.seq + ' marked paid');
+        showToast('Stage ' + inst.seq + ' marked paid' + (expenseEntryId ? ' and added to expenses' : ''));
         renderLend();
       });
     });
@@ -1385,6 +1398,9 @@
         if(removed && removed.instId){
           const inst = (loan.installments||[]).find(i => i.id === removed.instId);
           if(inst){ inst.paid = false; inst.paidDate = null; }
+        }
+        if(removed && removed.expenseEntryId){
+          data.entries = data.entries.filter(x => x.id !== removed.expenseEntryId);
         }
         checkAndLogClosed(loan);
         await saveData();
