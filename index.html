@@ -33,6 +33,8 @@
     --slate-deep: #38454F;
     --rust: #9B5B45;
     --rust-deep: #7A4635;
+    --trip: #3F6B66;
+    --trip-deep: #2E4F4B;
     --bezel: #23281F;
   }
   *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
@@ -335,10 +337,49 @@
   .repay-form button{ background:var(--moss); color:#F5F3EB; border:none; border-radius:6px; padding:7px 12px; font-size:12px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; white-space:nowrap; }
   .loan-delete-btn{ background:none; border:none; color:var(--brick); font-size:11.5px; cursor:pointer; margin-top:10px; font-family:'Inter',sans-serif; padding:0; }
 
+  /* ---- Trip/event tagging ---- */
+  .event-tag-toggle{ background:none; border:none; color:var(--trip-deep); font-size:12.5px; font-weight:600; cursor:pointer; padding:0; font-family:'Inter',sans-serif; }
+  .chip.selected-event{ background:var(--trip); border-color:var(--trip); color:#F5F3EB; }
+  .event-badge{ display:inline-block; font-size:9.5px; font-weight:600; padding:2px 6px; border-radius:8px; background:rgba(63,107,102,0.15); color:var(--trip-deep); margin-left:6px; vertical-align:middle; }
+
+  /* ---- Trips tab ---- */
+  .type-toggle button.active.trip{ background: var(--trip); color:#F5F3EB; }
+  .new-event-form{ background:var(--card); border-radius:12px; padding:14px; margin-bottom:18px; display:none; }
+  .new-event-form.open{ display:block; }
+  .new-event-form .field-row{ margin-bottom:12px; }
+  .new-event-form .field-row:last-of-type{ margin-bottom:0; }
+  .new-event-form input{
+    width:100%; border:none; border-bottom:1.5px solid var(--rule); background:transparent;
+    padding:7px 2px; font-size:14px; font-family:'Inter',sans-serif; color:var(--ink);
+  }
+  .new-event-form input:focus{ outline:none; border-bottom-color:var(--trip); }
+  .submit-btn.trip{ background:var(--trip); }
+  .new-event-toggle{
+    width:100%; padding:11px 0; border-radius:10px; border:1.5px dashed var(--trip); background:none;
+    color:var(--trip-deep); font-size:13.5px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; margin-bottom:18px;
+  }
+  .event-card{ background:var(--card); border-radius:12px; padding:14px; margin-bottom:12px; }
+  .event-top{ display:flex; justify-content:space-between; align-items:flex-start; cursor:pointer; }
+  .event-name{ font-size:14.5px; font-weight:600; }
+  .event-name .kind-tag{ margin-left:0; margin-right:0; }
+  .event-dates{ font-size:11px; color:var(--ink-soft); margin-top:2px; }
+  .event-total{ text-align:right; }
+  .event-total .amt{ font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:600; color:var(--trip-deep); }
+  .event-total .lbl{ font-size:10px; color:var(--ink-soft); }
+  .event-detail{ display:none; margin-top:14px; padding-top:12px; border-top:1px dotted var(--rule); }
+  .event-detail.open{ display:block; }
+  .mileage-stats{ display:flex; gap:8px; margin-bottom:14px; }
+  .mileage-stat{ flex:1; background:var(--paper-alt); border-radius:8px; padding:9px 10px; }
+  .mileage-stat .label{ font-size:9.5px; color:var(--ink-soft); margin-bottom:3px; }
+  .mileage-stat .val{ font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; }
+  .mileage-stat input{ width:100%; border:none; border-bottom:1px dotted var(--rule); background:transparent; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:var(--ink); padding:1px 0; }
+  .mileage-stat input:focus{ outline:none; border-bottom-color:var(--trip-deep); }
+  .event-delete-btn{ background:none; border:none; color:var(--brick); font-size:11.5px; cursor:pointer; margin-top:12px; font-family:'Inter',sans-serif; padding:0; }
+
   @media print{
     body{ background:#fff; padding:0; }
     .phone{ box-shadow:none; max-width:100%; max-height:none; border-radius:0; }
-    .topbar, .bottomnav, #tab-add, #tab-overview, #tab-lend, #tab-history{ display:none !important; }
+    .topbar, .bottomnav, #tab-add, #tab-overview, #tab-lend, #tab-history, #tab-trips{ display:none !important; }
     .screen{ overflow:visible; padding:20px; }
     .print-btn{ display:none; }
     #backupInfo{ display:none; }
@@ -387,6 +428,17 @@
       <div class="field-row">
         <label for="fNote">Note (optional)</label>
         <input type="text" id="fNote" placeholder="What was it for?" maxlength="60">
+      </div>
+
+      <div class="field-row">
+        <button type="button" id="eventTagToggle" class="event-tag-toggle">+ Tag to a trip/event</button>
+        <div id="eventTagBox" style="display:none; margin-top:8px;">
+          <div class="chip-row" id="eventChipRow"></div>
+          <div class="add-cat-inline" id="addEventInline" style="display:none;">
+            <input type="text" id="newEventInlineName" placeholder="Trip/event name" maxlength="40">
+            <button type="button" id="confirmAddEventInline">Add</button>
+          </div>
+        </div>
       </div>
 
       <button type="submit" class="submit-btn expense" id="submitBtn">Add expense</button>
@@ -578,6 +630,34 @@
     <button type="button" class="print-btn" id="printBtn">Print report</button>
   </div>
 
+  <!-- TRIPS TAB -->
+  <div class="screen" id="tab-trips">
+    <button type="button" class="new-event-toggle" id="newEventToggle">+ New trip / event</button>
+    <div class="new-event-form" id="newEventForm">
+      <div class="field-row">
+        <label>Type</label>
+        <div class="type-toggle" id="eventTypeToggle">
+          <button type="button" class="trip active" data-etype="trip">Road trip</button>
+          <button type="button" class="trip" data-etype="event">Event / function</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <label>Name</label>
+        <input type="text" id="newEventName" placeholder="e.g. Goa Road Trip" maxlength="40">
+      </div>
+      <div class="field-row">
+        <label>Start date</label>
+        <input type="date" id="newEventStart">
+      </div>
+      <div class="field-row">
+        <label>End date (optional)</label>
+        <input type="date" id="newEventEnd">
+      </div>
+      <button type="button" class="submit-btn trip" id="submitEvent">Create</button>
+    </div>
+    <div id="eventsList"></div>
+  </div>
+
   <div class="bottomnav">
     <button class="nav-btn active" data-tab="add">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
@@ -599,6 +679,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="20" x2="5" y2="11"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="19" y1="20" x2="19" y2="14"/></svg>
       <span>Reports</span>
     </button>
+    <button class="nav-btn" data-tab="trips">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.5-7-11a7 7 0 0 1 14 0c0 4.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+      <span>Trips</span>
+    </button>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -612,7 +696,7 @@
   const DEFAULT_EXPENSE_CATS = ["Food","Transport","Utilities","Rent/EMI","Shopping","Health","Entertainment","Savings/Investment","Business","Other"];
   const DEFAULT_INCOME_CATS = ["Business Income","Salary/Drawings","Investment Returns","Rental Income","Freelance","Other Income"];
 
-  let data = { expenseCategories: [...DEFAULT_EXPENSE_CATS], incomeCategories: [...DEFAULT_INCOME_CATS], budgets: {}, entries: [], loans: [], loanLog: [], totalBudgetOverride: 0 };
+  let data = { expenseCategories: [...DEFAULT_EXPENSE_CATS], incomeCategories: [...DEFAULT_INCOME_CATS], budgets: {}, entries: [], loans: [], loanLog: [], totalBudgetOverride: 0, events: [] };
   let currentMonth = new Date(); currentMonth.setDate(1);
   let currentType = 'expense';
   let selectedCategory = null;
@@ -624,6 +708,9 @@
   let selectedPerson = null;
   let personFilter = null;
   let payingPerson = null;
+  let selectedEventId = null;
+  let expandedEventId = null;
+  let selectedEventType = 'trip';
 
   function fmt(n){
     n = Math.round(n*100)/100;
@@ -674,6 +761,7 @@
           data.loans = (p.loans || []).map(l => ({ direction:'lent', kind:'person', settledLogged:false, ...l }));
           data.loanLog = p.loanLog || [];
           data.totalBudgetOverride = Number(p.totalBudgetOverride) || 0;
+          data.events = p.events || [];
         } else if(p.expenses){
           // migrate old expense-only shape
           data.expenseCategories = (p.categories && p.categories.length) ? p.categories : DEFAULT_EXPENSE_CATS;
@@ -715,11 +803,12 @@
   function setTab(tab){
     document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'tab-'+tab));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-    document.getElementById('monthNavEl').style.visibility = (tab === 'lend') ? 'hidden' : 'visible';
+    document.getElementById('monthNavEl').style.visibility = (tab === 'lend' || tab === 'trips') ? 'hidden' : 'visible';
     if(tab === 'overview') renderOverview();
     if(tab === 'lend') renderLend();
     if(tab === 'history') renderHistory();
     if(tab === 'reports') renderReports();
+    if(tab === 'trips') renderTrips();
   }
   document.querySelectorAll('.nav-btn').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
 
@@ -785,7 +874,7 @@
       return;
     }
     const id = Date.now();
-    data.entries.push({ id, type: currentType, date: dateVal, category: selectedCategory, amount: amt, note: noteVal });
+    data.entries.push({ id, type: currentType, date: dateVal, category: selectedCategory, amount: amt, note: noteVal, eventId: selectedEventId });
     newRowId = id;
     await saveData();
 
@@ -798,7 +887,60 @@
     document.getElementById('fAmount').value = '';
     document.getElementById('fNote').value = '';
     document.getElementById('fDate').value = todayStr();
+    selectedEventId = null;
+    document.getElementById('eventTagBox').style.display = 'none';
+    document.getElementById('addEventInline').style.display = 'none';
   });
+
+  document.getElementById('eventTagToggle').addEventListener('click', () => {
+    const box = document.getElementById('eventTagBox');
+    const willShow = box.style.display === 'none' || !box.style.display;
+    box.style.display = willShow ? 'block' : 'none';
+    if(willShow) renderEventChips();
+  });
+
+  function renderEventChips(){
+    const row = document.getElementById('eventChipRow');
+    if(!row) return;
+    row.innerHTML = '';
+    const noneChip = document.createElement('button');
+    noneChip.type = 'button';
+    noneChip.className = 'chip' + (selectedEventId === null ? ' selected-event' : '');
+    noneChip.textContent = 'None';
+    noneChip.addEventListener('click', () => { selectedEventId = null; renderEventChips(); });
+    row.appendChild(noneChip);
+    data.events.forEach(ev => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip' + (selectedEventId === ev.id ? ' selected-event' : '');
+      b.textContent = ev.name;
+      b.addEventListener('click', () => { selectedEventId = ev.id; document.getElementById('addEventInline').style.display='none'; renderEventChips(); });
+      row.appendChild(b);
+    });
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'chip add-chip';
+    addBtn.textContent = '+ New';
+    addBtn.addEventListener('click', () => {
+      document.getElementById('addEventInline').style.display = 'flex';
+      document.getElementById('newEventInlineName').focus();
+    });
+    row.appendChild(addBtn);
+  }
+
+  document.getElementById('confirmAddEventInline').addEventListener('click', async () => {
+    const inp = document.getElementById('newEventInlineName');
+    const val = inp.value.trim();
+    if(!val) return;
+    const id = Date.now();
+    data.events.push({ id, name: val, type:'event', startDate: todayStr(), endDate: null, distanceKm:0, fuelLiters:0 });
+    selectedEventId = id;
+    inp.value = '';
+    document.getElementById('addEventInline').style.display = 'none';
+    await saveData();
+    renderEventChips();
+  });
+
 
   /* ---------- Overview tab ---------- */
   function renderDonut(spendMap, categories){
@@ -938,9 +1080,11 @@
       const dateStr = d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
       const sign = x.type === 'income' ? '+' : '−';
       const highlight = x.id === newRowId ? ' style="background:rgba(169,131,91,0.15)"' : '';
+      const ev = x.eventId ? data.events.find(e => e.id === x.eventId) : null;
+      const evBadge = ev ? `<span class="event-badge">${ev.name}</span>` : '';
       return `<div class="tx-row"${highlight}>
         <div class="tx-date">${dateStr}</div>
-        <div class="tx-main"><div class="tx-cat">${x.category}</div>${x.note?`<div class="tx-note">${x.note}</div>`:''}</div>
+        <div class="tx-main"><div class="tx-cat">${x.category}${evBadge}</div>${x.note?`<div class="tx-note">${x.note}</div>`:''}</div>
         <div class="tx-amt ${x.type}">${sign}${fmt(x.amount)}</div>
         <button class="del-btn" data-id="${x.id}">✕</button>
       </div>`;
@@ -1688,6 +1832,141 @@
 
   document.getElementById('printBtn').addEventListener('click', () => window.print());
 
+  /* ---------- Trips tab ---------- */
+  document.querySelectorAll('#eventTypeToggle button').forEach(b => {
+    b.addEventListener('click', () => {
+      selectedEventType = b.dataset.etype;
+      document.querySelectorAll('#eventTypeToggle button').forEach(x => x.classList.toggle('active', x===b));
+    });
+  });
+
+  document.getElementById('newEventToggle').addEventListener('click', () => {
+    const form = document.getElementById('newEventForm');
+    form.classList.toggle('open');
+    if(form.classList.contains('open')){
+      document.getElementById('newEventStart').value = todayStr();
+    }
+  });
+
+  document.getElementById('submitEvent').addEventListener('click', async () => {
+    const name = document.getElementById('newEventName').value.trim();
+    const start = document.getElementById('newEventStart').value || todayStr();
+    const end = document.getElementById('newEventEnd').value || null;
+    if(!name){ showToast('Enter a name first'); return; }
+    const id = Date.now();
+    data.events.push({ id, name, type: selectedEventType, startDate: start, endDate: end, distanceKm:0, fuelLiters:0 });
+    await saveData();
+    document.getElementById('newEventName').value = '';
+    document.getElementById('newEventEnd').value = '';
+    document.getElementById('newEventForm').classList.remove('open');
+    expandedEventId = id;
+    showToast('Created — tag expenses to it from the Add tab');
+    renderTrips();
+  });
+
+  function eventEntries(eventId){ return data.entries.filter(x => x.eventId === eventId); }
+  function eventTotal(eventId){ return eventEntries(eventId).filter(x=>x.type==='expense').reduce((s,x)=>s+Number(x.amount),0); }
+
+  function renderTrips(){
+    const box = document.getElementById('eventsList');
+    if(data.events.length === 0){
+      box.innerHTML = '<div class="empty-state">No trips or events yet. Create one above, then tag expenses to it from the Add tab.</div>';
+      return;
+    }
+    const sorted = [...data.events].sort((a,b) => b.startDate.localeCompare(a.startDate));
+    box.innerHTML = sorted.map(ev => {
+      const total = eventTotal(ev.id);
+      const isOpen = ev.id === expandedEventId;
+      const dateRange = (ev.endDate && ev.endDate !== ev.startDate)
+        ? `${new Date(ev.startDate+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'})} – ${new Date(ev.endDate+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}`
+        : new Date(ev.startDate+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+      const kindTag = ev.type==='trip' ? '<span class="kind-tag">Road trip</span>' : '<span class="kind-tag">Event</span>';
+
+      let mileageBlock = '';
+      if(ev.type === 'trip'){
+        const mileage = (ev.distanceKm>0 && ev.fuelLiters>0) ? (ev.distanceKm/ev.fuelLiters).toFixed(1) : null;
+        const costPerKm = (ev.distanceKm>0 && total>0) ? (total/ev.distanceKm) : null;
+        mileageBlock = `
+          <div class="mileage-stats">
+            <div class="mileage-stat">
+              <div class="label">Distance (km)</div>
+              <input type="number" min="0" step="0.1" class="mileage-input" data-event="${ev.id}" data-field="distanceKm" value="${ev.distanceKm||''}" placeholder="0">
+            </div>
+            <div class="mileage-stat">
+              <div class="label">Fuel used (L)</div>
+              <input type="number" min="0" step="0.1" class="mileage-input" data-event="${ev.id}" data-field="fuelLiters" value="${ev.fuelLiters||''}" placeholder="0">
+            </div>
+            <div class="mileage-stat">
+              <div class="label">Avg mileage</div>
+              <div class="val">${mileage ? mileage+' km/l' : '—'}</div>
+            </div>
+          </div>
+          ${costPerKm ? `<div style="font-size:11px; color:var(--ink-soft); margin-bottom:12px;">≈ ${fmt(costPerKm)} per km overall</div>` : ''}`;
+      }
+
+      const entries = eventEntries(ev.id).filter(x=>x.type==='expense');
+      const spendMap = categorySpend(entries);
+      const catRows = Object.entries(spendMap).sort((a,b)=>b[1]-a[1]).map(([c,v]) =>
+        `<li><span>${c}</span><span class="amt">${fmt(v)}</span></li>`).join('') || '<li><span>No expenses tagged yet</span></li>';
+
+      const txRows = [...entries].sort((a,b)=>b.date.localeCompare(a.date)).map(x => {
+        const d = new Date(x.date+'T00:00:00');
+        return `<div class="tx-row">
+          <div class="tx-date">${d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}</div>
+          <div class="tx-main"><div class="tx-cat">${x.category}</div>${x.note?`<div class="tx-note">${x.note}</div>`:''}</div>
+          <div class="tx-amt expense">${fmt(x.amount)}</div>
+        </div>`;
+      }).join('');
+
+      return `<div class="event-card">
+        <div class="event-top" data-toggle-event="${ev.id}">
+          <div>
+            <div class="event-name">${ev.name}${kindTag}</div>
+            <div class="event-dates">${dateRange}</div>
+          </div>
+          <div class="event-total"><div class="amt">${fmt(total)}</div><div class="lbl">spent</div></div>
+        </div>
+        <div class="event-detail ${isOpen?'open':''}">
+          ${mileageBlock}
+          <div style="font-size:11px; color:var(--ink-soft); margin-bottom:6px;">By category</div>
+          <ul class="top-cats">${catRows}</ul>
+          <div style="font-size:11px; color:var(--ink-soft); margin:12px 0 6px;">Transactions</div>
+          ${txRows || '<div class="empty-state" style="padding:14px 0;">Nothing tagged to this trip yet.</div>'}
+          <button class="event-delete-btn" data-delete-event="${ev.id}">Delete this trip/event</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    box.querySelectorAll('[data-toggle-event]').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = Number(el.dataset.toggleEvent);
+        expandedEventId = (expandedEventId === id) ? null : id;
+        renderTrips();
+      });
+    });
+    box.querySelectorAll('.mileage-input').forEach(inp => {
+      inp.addEventListener('change', async (e) => {
+        const id = Number(e.target.dataset.event);
+        const field = e.target.dataset.field;
+        const ev = data.events.find(x=>x.id===id);
+        if(!ev) return;
+        ev[field] = Math.max(0, Number(e.target.value)) || 0;
+        await saveData();
+        renderTrips();
+      });
+    });
+    box.querySelectorAll('[data-delete-event]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = Number(e.currentTarget.dataset.deleteEvent);
+        data.entries.forEach(x => { if(x.eventId === id) x.eventId = null; });
+        data.events = data.events.filter(x => x.id !== id);
+        await saveData();
+        expandedEventId = null;
+        renderTrips();
+      });
+    });
+  }
+
   /* ---------- Backup ---------- */
   function getLastBackupDays(){
     try{
@@ -1745,6 +2024,7 @@
         data.loans = (parsed.loans || []).map(l => ({ direction:'lent', kind:'person', settledLogged:false, ...l }));
         data.loanLog = parsed.loanLog || [];
         data.totalBudgetOverride = Number(parsed.totalBudgetOverride) || 0;
+        data.events = parsed.events || [];
         await saveData();
         showToast('Backup restored');
         location.reload();
