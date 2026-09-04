@@ -668,7 +668,7 @@
     </section>
 
     <button type="button" class="print-btn" id="printBtn">Print report</button>
-    <div style="text-align:center; font-size:9.5px; color:var(--ink-soft); margin-top:18px; font-style:italic; font-family:'Fraunces',Georgia,serif;">Build 2026-09-04-03</div>
+    <div style="text-align:center; font-size:9.5px; color:var(--ink-soft); margin-top:18px; font-style:italic; font-family:'Fraunces',Georgia,serif;">Build 2026-09-04-05</div>
   </div>
 
   <!-- TRIPS TAB -->
@@ -2219,7 +2219,7 @@
   function updateLastTimeNote(){
     const el = document.getElementById('lastTimeNote');
     if(!selectedExercise){ el.innerHTML = ''; return; }
-    const past = data.workouts.filter(w => w.exercise === selectedExercise).sort((a,b) => b.date.localeCompare(a.date));
+    const past = data.workouts.filter(w => w.exercise === selectedExercise).sort((a,b) => b.date.localeCompare(a.date) || b.id - a.id);
     if(past.length === 0){ el.innerHTML = ''; return; }
     const last = past[0];
     const setsSummary = last.sets.map(s => `${s.weight}kg×${s.reps||'?'}`).join(', ');
@@ -2356,7 +2356,7 @@
   }
 
   function renderExerciseChart(sessions){
-    const chrono = [...sessions].sort((a,b) => a.date.localeCompare(b.date)).slice(-10);
+    const chrono = [...sessions].sort((a,b) => a.date.localeCompare(b.date) || a.id - b.id).slice(-10);
     if(chrono.length < 2) return '';
     const points = chrono.map(w => Math.max(...w.sets.map(s => s.weight)));
     const max = Math.max(...points, 1);
@@ -2382,7 +2382,7 @@
     }
     const names = [...new Set(data.workouts.map(w => w.exercise))];
     let summaries = names.map(name => {
-      const sessions = data.workouts.filter(w => w.exercise===name).sort((a,b) => b.date.localeCompare(a.date));
+      const sessions = data.workouts.filter(w => w.exercise===name).sort((a,b) => b.date.localeCompare(a.date) || b.id - a.id);
       const last = sessions[0];
       const topWeight = Math.max(...last.sets.map(s => s.weight));
       const ex = data.exercises.find(e => e.name === name);
