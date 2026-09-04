@@ -391,6 +391,10 @@
   .set-row .set-remove{ background:none; border:none; color:var(--ink-soft); font-size:13px; cursor:pointer; padding:2px 4px; flex-shrink:0; }
   .add-set-btn{ background:none; border:1.5px dashed var(--rule); color:var(--ink-soft); border-radius:6px; padding:6px 0; width:100%; font-size:12px; cursor:pointer; font-family:'Inter',sans-serif; margin-bottom:14px; }
   .last-time-note{ font-size:11px; color:var(--health-deep); background:rgba(181,86,107,0.1); border-radius:6px; padding:8px 10px; margin-bottom:14px; }
+  .quickfill-btn{ background:none; border:1.5px solid var(--health); color:var(--health-deep); border-radius:6px; padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; }
+  #addExerciseInline{ display:none; flex-direction:column; gap:8px; margin-top:8px; }
+  #addExerciseInline input{ border:none; border-bottom:1px solid var(--rule); background:transparent; padding:6px 2px; font-size:13px; font-family:inherit; color:var(--ink); }
+  .confirm-add-btn{ align-self:flex-start; background:none; border:none; color:var(--brass-deep); font-size:13px; cursor:pointer; padding:0; font-family:'Inter',sans-serif; }
   .chip.selected-health{ background:var(--health); border-color:var(--health); color:#F5F3EB; }
   .workout-session-row{ padding:8px 0; border-bottom:1px dotted var(--rule); font-size:12.5px; }
   .workout-session-row:last-child{ border-bottom:none; }
@@ -700,14 +704,31 @@
 
     <!-- Workout section -->
     <div id="healthWorkoutSection">
+      <div class="chip-row" id="splitFilterRow" style="margin-bottom:16px;">
+        <button type="button" class="chip selected-health" data-group="All">All</button>
+        <button type="button" class="chip" data-group="Chest">Chest</button>
+        <button type="button" class="chip" data-group="Back">Back</button>
+        <button type="button" class="chip" data-group="Shoulders">Shoulders</button>
+        <button type="button" class="chip" data-group="Arms">Arms</button>
+        <button type="button" class="chip" data-group="Legs">Legs</button>
+        <button type="button" class="chip" data-group="Other">Other</button>
+      </div>
       <button type="button" class="new-loan-toggle health-toggle" id="newWorkoutToggle">+ Log workout</button>
       <div class="new-loan-form" id="newWorkoutForm">
         <div class="field-row">
           <label>Exercise</label>
           <div class="chip-row" id="exerciseChipRow"></div>
-          <div class="add-cat-inline" id="addExerciseInline" style="display:none;">
+          <div id="addExerciseInline">
             <input type="text" id="newExerciseInput" placeholder="Exercise name" maxlength="30">
-            <button type="button" id="confirmAddExercise">Add</button>
+            <div class="chip-row" id="newExerciseGroupRow">
+              <button type="button" class="chip selected-health" data-group="Chest">Chest</button>
+              <button type="button" class="chip" data-group="Back">Back</button>
+              <button type="button" class="chip" data-group="Shoulders">Shoulders</button>
+              <button type="button" class="chip" data-group="Arms">Arms</button>
+              <button type="button" class="chip" data-group="Legs">Legs</button>
+              <button type="button" class="chip" data-group="Other">Other</button>
+            </div>
+            <button type="button" id="confirmAddExercise" class="confirm-add-btn">Add exercise</button>
           </div>
         </div>
         <div id="lastTimeNote"></div>
@@ -830,6 +851,8 @@
   let selectedEventType = 'trip';
   let healthView = 'workout';
   let selectedExercise = null;
+  let exerciseFilterGroup = 'All';
+  let newExerciseGroup = 'Chest';
   let draftSets = [{weight:'',reps:''}];
   let expandedExerciseName = null;
   let currentHealthDay = new Date();
@@ -885,7 +908,7 @@
           data.loanLog = p.loanLog || [];
           data.totalBudgetOverride = Number(p.totalBudgetOverride) || 0;
           data.events = p.events || [];
-          data.exercises = p.exercises || [];
+          data.exercises = (p.exercises || []).map(e => typeof e === 'string' ? {name:e, group:'Other'} : e);
           data.workouts = p.workouts || [];
           data.meals = p.meals || [];
           data.calorieTarget = Number(p.calorieTarget) || 0;
@@ -2114,16 +2137,33 @@
   }
 
   /* -- Workout logging -- */
+  document.querySelectorAll('#splitFilterRow .chip').forEach(b => {
+    b.addEventListener('click', () => {
+      exerciseFilterGroup = b.dataset.group;
+      document.querySelectorAll('#splitFilterRow .chip').forEach(x => x.classList.toggle('selected-health', x===b));
+      renderExerciseChips();
+      renderExerciseList();
+    });
+  });
+
+  document.querySelectorAll('#newExerciseGroupRow .chip').forEach(b => {
+    b.addEventListener('click', () => {
+      newExerciseGroup = b.dataset.group;
+      document.querySelectorAll('#newExerciseGroupRow .chip').forEach(x => x.classList.toggle('selected-health', x===b));
+    });
+  });
+
   function renderExerciseChips(){
     const row = document.getElementById('exerciseChipRow');
     row.innerHTML = '';
-    data.exercises.forEach(name => {
+    const list = exerciseFilterGroup === 'All' ? data.exercises : data.exercises.filter(e => e.group === exerciseFilterGroup);
+    list.forEach(ex => {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'chip' + (selectedExercise===name ? ' selected-health' : '');
-      b.textContent = name;
+      b.className = 'chip' + (selectedExercise===ex.name ? ' selected-health' : '');
+      b.textContent = ex.name;
       b.addEventListener('click', () => {
-        selectedExercise = name;
+        selectedExercise = ex.name;
         document.getElementById('addExerciseInline').style.display = 'none';
         renderExerciseChips();
         updateLastTimeNote();
@@ -2145,13 +2185,16 @@
     const inp = document.getElementById('newExerciseInput');
     const val = inp.value.trim();
     if(!val) return;
-    if(!data.exercises.includes(val)) data.exercises.push(val);
+    if(!data.exercises.some(e => e.name === val)) data.exercises.push({ name: val, group: newExerciseGroup });
     selectedExercise = val;
+    exerciseFilterGroup = newExerciseGroup;
+    document.querySelectorAll('#splitFilterRow .chip').forEach(x => x.classList.toggle('selected-health', x.dataset.group === newExerciseGroup));
     inp.value = '';
     document.getElementById('addExerciseInline').style.display = 'none';
     await saveData();
     renderExerciseChips();
     updateLastTimeNote();
+    renderExerciseList();
   });
 
   function updateLastTimeNote(){
@@ -2162,8 +2205,23 @@
     const last = past[0];
     const setsSummary = last.sets.map(s => `${s.weight}kg×${s.reps||'?'}`).join(', ');
     const d = new Date(last.date+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
-    el.innerHTML = `<div class="last-time-note">Last time (${d}): ${setsSummary}</div>`;
+    el.innerHTML = `<div class="last-time-note">Last time (${d}): ${setsSummary}
+      <div style="margin-top:7px; display:flex; gap:6px; flex-wrap:wrap;">
+        <button type="button" class="quickfill-btn" data-add="0">Same as last time</button>
+        <button type="button" class="quickfill-btn" data-add="2.5">+2.5kg</button>
+        <button type="button" class="quickfill-btn" data-add="5">+5kg</button>
+      </div>
+    </div>`;
+    el.querySelectorAll('.quickfill-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const add = Number(btn.dataset.add);
+        draftSets = last.sets.map(s => ({ weight: String(Number(s.weight)+add), reps: String(s.reps) }));
+        renderSetRows();
+        showToast(add > 0 ? `Sets filled at +${add}kg — adjust if needed` : 'Sets filled from last time');
+      });
+    });
   }
+
 
   function renderSetRows(){
     const box = document.getElementById('setRows');
@@ -2250,12 +2308,23 @@
       box.innerHTML = '<div class="empty-state">No workouts logged yet. Log one above to start tracking.</div>';
       return;
     }
-    const names = [...new Set(data.workouts.map(w => w.exercise))];
+    let names = [...new Set(data.workouts.map(w => w.exercise))];
+    if(exerciseFilterGroup !== 'All'){
+      names = names.filter(name => {
+        const ex = data.exercises.find(e => e.name === name);
+        return ex && ex.group === exerciseFilterGroup;
+      });
+    }
+    if(names.length === 0){
+      box.innerHTML = '<div class="empty-state">No exercises logged for this split yet.</div>';
+      return;
+    }
     const summaries = names.map(name => {
       const sessions = data.workouts.filter(w => w.exercise===name).sort((a,b) => b.date.localeCompare(a.date));
       const last = sessions[0];
       const topWeight = Math.max(...last.sets.map(s => s.weight));
-      return { name, count: sessions.length, lastDate: last.date, topWeight, sessions };
+      const ex = data.exercises.find(e => e.name === name);
+      return { name, group: ex ? ex.group : 'Other', count: sessions.length, lastDate: last.date, topWeight, sessions };
     }).sort((a,b) => b.lastDate.localeCompare(a.lastDate));
 
     box.innerHTML = summaries.map(s => {
@@ -2269,7 +2338,7 @@
       const chart = isOpen ? renderExerciseChart(s.sessions) : '';
       return `<div class="event-card">
         <div class="event-top" data-toggle-exercise="${s.name}">
-          <div><div class="event-name">${s.name}</div><div class="event-dates">${d} · ${s.count} session${s.count===1?'':'s'}</div></div>
+          <div><div class="event-name">${s.name}<span class="kind-tag">${s.group}</span></div><div class="event-dates">${d} · ${s.count} session${s.count===1?'':'s'}</div></div>
           <div class="event-total"><div class="amt">${s.topWeight}kg</div><div class="lbl">last top set</div></div>
         </div>
         <div class="loan-detail ${isOpen?'open':''}">
@@ -2444,7 +2513,7 @@
         data.loanLog = parsed.loanLog || [];
         data.totalBudgetOverride = Number(parsed.totalBudgetOverride) || 0;
         data.events = parsed.events || [];
-        data.exercises = parsed.exercises || [];
+        data.exercises = (parsed.exercises || []).map(e => typeof e === 'string' ? {name:e, group:'Other'} : e);
         data.workouts = parsed.workouts || [];
         data.meals = parsed.meals || [];
         data.calorieTarget = Number(parsed.calorieTarget) || 0;
