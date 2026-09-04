@@ -668,7 +668,7 @@
     </section>
 
     <button type="button" class="print-btn" id="printBtn">Print report</button>
-    <div style="text-align:center; font-size:9.5px; color:var(--ink-soft); margin-top:18px; font-style:italic; font-family:'Fraunces',Georgia,serif;">Build 2026-09-04-02</div>
+    <div style="text-align:center; font-size:9.5px; color:var(--ink-soft); margin-top:18px; font-style:italic; font-family:'Fraunces',Georgia,serif;">Build 2026-09-04-03</div>
   </div>
 
   <!-- TRIPS TAB -->
@@ -717,6 +717,8 @@
         <button type="button" class="chip" data-group="Legs">Legs</button>
         <button type="button" class="chip" data-group="Other">Other</button>
       </div>
+      <button type="button" class="event-tag-toggle" id="ledgerToggle" style="display:block; margin-bottom:16px;">Edit exercise ledger</button>
+      <div id="exerciseLedger" style="display:none; margin-bottom:18px;"></div>
       <button type="button" class="new-loan-toggle health-toggle" id="newWorkoutToggle">+ Log workout</button>
       <div class="new-loan-form" id="newWorkoutForm">
         <div class="field-row">
@@ -724,6 +726,7 @@
           <div class="chip-row" id="exerciseChipRow"></div>
           <div id="addExerciseInline">
             <input type="text" id="newExerciseInput" placeholder="Exercise name" maxlength="30">
+            <div id="inheritedGroupNote" style="display:none; font-size:11px; color:var(--health-deep); font-weight:600;"></div>
             <div class="chip-row" id="newExerciseGroupRow">
               <button type="button" class="chip selected-health" data-group="Chest">Chest</button>
               <button type="button" class="chip" data-group="Back">Back</button>
@@ -2145,6 +2148,7 @@
     b.addEventListener('click', () => {
       exerciseFilterGroup = b.dataset.group;
       document.querySelectorAll('#splitFilterRow .chip').forEach(x => x.classList.toggle('selected-health', x===b));
+      document.getElementById('addExerciseInline').style.display = 'none';
       renderExerciseChips();
       renderExerciseList();
     });
@@ -2181,6 +2185,17 @@
     addBtn.addEventListener('click', () => {
       document.getElementById('addExerciseInline').style.display = 'flex';
       document.getElementById('newExerciseInput').focus();
+      const groupRow = document.getElementById('newExerciseGroupRow');
+      const inheritedNote = document.getElementById('inheritedGroupNote');
+      if(exerciseFilterGroup !== 'All'){
+        newExerciseGroup = exerciseFilterGroup;
+        groupRow.style.display = 'none';
+        inheritedNote.textContent = 'Adding to: ' + exerciseFilterGroup;
+        inheritedNote.style.display = 'block';
+      } else {
+        groupRow.style.display = 'flex';
+        inheritedNote.style.display = 'none';
+      }
     });
     row.appendChild(addBtn);
   }
@@ -2286,6 +2301,59 @@
     renderSetRows();
     renderExerciseList();
   });
+
+  document.getElementById('ledgerToggle').addEventListener('click', () => {
+    const box = document.getElementById('exerciseLedger');
+    const willShow = box.style.display === 'none' || !box.style.display;
+    box.style.display = willShow ? 'block' : 'none';
+    if(willShow) renderExerciseLedger();
+  });
+
+  function renderExerciseLedger(){
+    const box = document.getElementById('exerciseLedger');
+    const groupOrder = ['Chest','Back','Shoulders','Arms','Legs','Other'];
+    box.innerHTML = groupOrder.map(g => {
+      const list = data.exercises.filter(e => e.group === g);
+      const chips = list.map(e =>
+        `<span class="chip" style="cursor:default;">${e.name}<button type="button" class="ledger-remove" data-name="${e.name}" style="background:none;border:none;color:inherit;opacity:0.65;cursor:pointer;font-size:11px;padding:0 0 0 6px;">✕</button></span>`
+      ).join('');
+      return `<div class="event-card">
+        <div class="split-group-title">${g}</div>
+        <div class="chip-row" style="margin-bottom:10px;">${chips || '<span style="font-size:11.5px; color:var(--ink-soft);">No exercises yet</span>'}</div>
+        <div class="add-cat-inline">
+          <input type="text" class="ledger-add-input" data-group="${g}" placeholder="Add exercise to ${g}" maxlength="30">
+          <button type="button" class="ledger-add-btn" data-group="${g}">Add</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    box.querySelectorAll('.ledger-add-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const g = e.currentTarget.dataset.group;
+        const input = box.querySelector(`.ledger-add-input[data-group="${g}"]`);
+        const val = input.value.trim();
+        if(!val) return;
+        if(!data.exercises.some(x => x.name === val)) data.exercises.push({ name: val, group: g });
+        input.value = '';
+        await saveData();
+        renderExerciseLedger();
+        renderExerciseChips();
+      });
+    });
+    box.querySelectorAll('.ledger-remove').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const name = e.currentTarget.dataset.name;
+        if(data.workouts.some(w => w.exercise === name)){
+          showToast("Can't remove — it has logged workouts. Use a split chip on it instead.");
+          return;
+        }
+        data.exercises = data.exercises.filter(x => x.name !== name);
+        await saveData();
+        renderExerciseLedger();
+        renderExerciseChips();
+      });
+    });
+  }
 
   function renderExerciseChart(sessions){
     const chrono = [...sessions].sort((a,b) => a.date.localeCompare(b.date)).slice(-10);
