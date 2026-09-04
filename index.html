@@ -397,6 +397,9 @@
   .confirm-add-btn{ align-self:flex-start; background:none; border:none; color:var(--brass-deep); font-size:13px; cursor:pointer; padding:0; font-family:'Inter',sans-serif; }
   .chip.selected-health{ background:var(--health); border-color:var(--health); color:#F5F3EB; }
   .workout-session-row{ padding:8px 0; border-bottom:1px dotted var(--rule); font-size:12.5px; }
+  .split-group-title{ font-family:'Fraunces',Georgia,serif; font-size:13.5px; font-weight:600; color:var(--health-deep); margin-bottom:10px; }
+  .exercise-item.with-divider{ border-top:1px solid var(--rule-soft); margin-top:12px; padding-top:12px; }
+  .group-edit-chip{ font-size:11px; padding:6px 10px; }
   .workout-session-row:last-child{ border-bottom:none; }
   .workout-session-row .wdate{ color:var(--ink-soft); font-size:11px; }
   .workout-session-row .del-btn{ float:right; background:none; border:none; color:var(--ink-soft); font-size:11px; cursor:pointer; }
@@ -665,7 +668,7 @@
     </section>
 
     <button type="button" class="print-btn" id="printBtn">Print report</button>
-    <div style="text-align:center; font-size:9.5px; color:var(--ink-soft); margin-top:18px; font-style:italic; font-family:'Fraunces',Georgia,serif;">Build 2026-09-04-01</div>
+    <div style="text-align:center; font-size:9.5px; color:var(--ink-soft); margin-top:18px; font-style:italic; font-family:'Fraunces',Georgia,serif;">Build 2026-09-04-02</div>
   </div>
 
   <!-- TRIPS TAB -->
@@ -2309,45 +2312,59 @@
       box.innerHTML = '<div class="empty-state">No workouts logged yet. Log one above to start tracking.</div>';
       return;
     }
-    let names = [...new Set(data.workouts.map(w => w.exercise))];
-    if(exerciseFilterGroup !== 'All'){
-      names = names.filter(name => {
-        const ex = data.exercises.find(e => e.name === name);
-        return ex && ex.group === exerciseFilterGroup;
-      });
-    }
-    if(names.length === 0){
-      box.innerHTML = '<div class="empty-state">No exercises logged for this split yet.</div>';
-      return;
-    }
-    const summaries = names.map(name => {
+    const names = [...new Set(data.workouts.map(w => w.exercise))];
+    let summaries = names.map(name => {
       const sessions = data.workouts.filter(w => w.exercise===name).sort((a,b) => b.date.localeCompare(a.date));
       const last = sessions[0];
       const topWeight = Math.max(...last.sets.map(s => s.weight));
       const ex = data.exercises.find(e => e.name === name);
       return { name, group: ex ? ex.group : 'Other', count: sessions.length, lastDate: last.date, topWeight, sessions };
-    }).sort((a,b) => b.lastDate.localeCompare(a.lastDate));
+    });
+    if(exerciseFilterGroup !== 'All'){
+      summaries = summaries.filter(s => s.group === exerciseFilterGroup);
+    }
+    if(summaries.length === 0){
+      box.innerHTML = '<div class="empty-state">No exercises logged for this split yet.</div>';
+      return;
+    }
 
-    box.innerHTML = summaries.map(s => {
-      const isOpen = expandedExerciseName === s.name;
-      const d = new Date(s.lastDate+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
-      const detailRows = s.sessions.map(w => {
-        const wd = new Date(w.date+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
-        const setsSummary = w.sets.map(x => `${x.weight}kg×${x.reps||'?'}`).join(', ');
-        return `<div class="workout-session-row"><button class="del-btn" data-workout="${w.id}">✕</button><span class="wdate">${wd}</span> — ${setsSummary}</div>`;
-      }).join('');
-      const chart = isOpen ? renderExerciseChart(s.sessions) : '';
-      return `<div class="event-card">
-        <div class="event-top" data-toggle-exercise="${s.name}">
-          <div><div class="event-name">${s.name}<span class="kind-tag">${s.group}</span></div><div class="event-dates">${d} · ${s.count} session${s.count===1?'':'s'}</div></div>
-          <div class="event-total"><div class="amt">${s.topWeight}kg</div><div class="lbl">last top set</div></div>
-        </div>
-        <div class="loan-detail ${isOpen?'open':''}">
-          ${chart}
-          ${detailRows}
-        </div>
-      </div>`;
-    }).join('');
+    const groupOrder = ['Chest','Back','Shoulders','Arms','Legs','Other'];
+    const byGroup = {};
+    summaries.forEach(s => { (byGroup[s.group] = byGroup[s.group] || []).push(s); });
+
+    let html = '';
+    groupOrder.forEach(g => {
+      if(!byGroup[g]) return;
+      const items = byGroup[g].sort((a,b) => b.lastDate.localeCompare(a.lastDate));
+      html += `<div class="event-card"><div class="split-group-title">${g}</div>`;
+      items.forEach((s, idx) => {
+        const isOpen = expandedExerciseName === s.name;
+        const d = new Date(s.lastDate+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+        const detailRows = s.sessions.map(w => {
+          const wd = new Date(w.date+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+          const setsSummary = w.sets.map(x => `${x.weight}kg×${x.reps||'?'}`).join(', ');
+          return `<div class="workout-session-row"><button class="del-btn" data-workout="${w.id}">✕</button><span class="wdate">${wd}</span> — ${setsSummary}</div>`;
+        }).join('');
+        const chart = isOpen ? renderExerciseChart(s.sessions) : '';
+        const groupChips = groupOrder.map(gg =>
+          `<button type="button" class="chip group-edit-chip${gg===s.group?' selected-health':''}" data-exercise="${s.name}" data-group="${gg}">${gg}</button>`
+        ).join('');
+        html += `<div class="exercise-item${idx>0?' with-divider':''}">
+          <div class="event-top" data-toggle-exercise="${s.name}">
+            <div><div class="event-name">${s.name}</div><div class="event-dates">${d} · ${s.count} session${s.count===1?'':'s'}</div></div>
+            <div class="event-total"><div class="amt">${s.topWeight}kg</div><div class="lbl">last top set</div></div>
+          </div>
+          <div class="loan-detail ${isOpen?'open':''}">
+            ${chart}
+            ${detailRows}
+            <div style="font-size:10px; color:var(--ink-soft); margin:12px 0 6px;">Move to a different split</div>
+            <div class="chip-row">${groupChips}</div>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    });
+    box.innerHTML = html;
 
     box.querySelectorAll('[data-toggle-exercise]').forEach(el => {
       el.addEventListener('click', () => {
@@ -2364,7 +2381,22 @@
         renderExerciseList();
       });
     });
+    box.querySelectorAll('.group-edit-chip').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const name = e.currentTarget.dataset.exercise;
+        const newGroup = e.currentTarget.dataset.group;
+        const ex = data.exercises.find(x => x.name === name);
+        if(ex) ex.group = newGroup;
+        else data.exercises.push({ name, group: newGroup });
+        await saveData();
+        showToast(name + ' moved to ' + newGroup);
+        renderExerciseList();
+        renderExerciseChips();
+      });
+    });
   }
+
 
   /* -- Nutrition logging -- */
   document.getElementById('prevHealthDay').addEventListener('click', () => { currentHealthDay.setDate(currentHealthDay.getDate()-1); renderNutrition(); });
