@@ -396,6 +396,7 @@
   #addExerciseInline input{ border:none; border-bottom:1px solid var(--rule); background:transparent; padding:6px 2px; font-size:13px; font-family:inherit; color:var(--ink); }
   .confirm-add-btn{ align-self:flex-start; background:none; border:none; color:var(--brass-deep); font-size:13px; cursor:pointer; padding:0; font-family:'Inter',sans-serif; }
   .chip.selected-health{ background:var(--health); border-color:var(--health); color:#F5F3EB; }
+  .chip.selected-bill{ background:var(--brass); border-color:var(--brass); color:#F5F3EB; }
   .workout-session-row{ padding:8px 0; border-bottom:1px dotted var(--rule); font-size:12.5px; }
   .split-group-title{ font-family:'Fraunces',Georgia,serif; font-size:13.5px; font-weight:600; color:var(--health-deep); margin-bottom:10px; }
   .exercise-item.with-divider{ border-top:1px solid var(--rule-soft); margin-top:12px; padding-top:12px; }
@@ -508,6 +509,42 @@
         </span>
       </div>
       <div id="totalLimitNote" style="font-size:10.5px; color:var(--ink-soft); margin-top:7px;"></div>
+    </section>
+
+    <section class="block">
+      <div class="section-title">Recurring bills</div>
+      <button type="button" class="new-loan-toggle" id="newBillToggle" style="border-color:var(--brass); color:var(--brass-deep);">+ New bill</button>
+      <div class="new-loan-form" id="newBillForm">
+        <div class="field-row">
+          <label>Name</label>
+          <input type="text" id="billName" placeholder="e.g. Health Insurance" maxlength="40">
+        </div>
+        <div class="field-row">
+          <label>Usual amount ₹</label>
+          <input type="number" id="billAmount" min="0" step="0.01" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="field-row">
+          <label>Category</label>
+          <div class="chip-row" id="billCategoryChipRow"></div>
+        </div>
+        <div class="field-row">
+          <label>Usually repeats every</label>
+          <div class="chip-row" id="billFreqChipRow">
+            <button type="button" class="chip selected-bill" data-months="1">Monthly</button>
+            <button type="button" class="chip" data-months="3">Quarterly</button>
+            <button type="button" class="chip" data-months="6">Half-yearly</button>
+            <button type="button" class="chip" data-months="12">Yearly</button>
+            <button type="button" class="chip" data-months="custom">Custom</button>
+          </div>
+          <input type="number" id="billFreqCustom" min="1" placeholder="Months" style="display:none; margin-top:8px;">
+        </div>
+        <div class="field-row">
+          <label>Next due date</label>
+          <input type="date" id="billNextDue">
+        </div>
+        <button type="button" class="submit-btn" id="submitBill" style="background:var(--brass);">Add bill</button>
+      </div>
+      <div id="billsList"></div>
     </section>
 
     <section class="block">
@@ -668,7 +705,7 @@
     </section>
 
     <button type="button" class="print-btn" id="printBtn">Print report</button>
-    <div style="text-align:center; font-size:9.5px; color:var(--ink-soft); margin-top:18px; font-style:italic; font-family:'Fraunces',Georgia,serif;">Build 2026-09-04-06</div>
+    <div style="text-align:center; font-size:9.5px; color:var(--ink-soft); margin-top:18px; font-style:italic; font-family:'Fraunces',Georgia,serif;">Build 2026-09-04-07</div>
   </div>
 
   <!-- TRIPS TAB -->
@@ -841,7 +878,7 @@
   const DEFAULT_EXPENSE_CATS = ["Food","Transport","Utilities","Rent/EMI","Shopping","Health","Entertainment","Savings/Investment","Business","Other"];
   const DEFAULT_INCOME_CATS = ["Business Income","Salary/Drawings","Investment Returns","Rental Income","Freelance","Other Income"];
 
-  let data = { expenseCategories: [...DEFAULT_EXPENSE_CATS], incomeCategories: [...DEFAULT_INCOME_CATS], budgets: {}, entries: [], loans: [], loanLog: [], totalBudgetOverride: 0, events: [], exercises: [], workouts: [], meals: [], calorieTarget: 0 };
+  let data = { expenseCategories: [...DEFAULT_EXPENSE_CATS], incomeCategories: [...DEFAULT_INCOME_CATS], budgets: {}, entries: [], loans: [], loanLog: [], totalBudgetOverride: 0, events: [], exercises: [], workouts: [], meals: [], calorieTarget: 0, bills: [] };
   let currentMonth = new Date(); currentMonth.setDate(1);
   let currentType = 'expense';
   let selectedCategory = null;
@@ -864,6 +901,10 @@
   let expandedExerciseName = null;
   let currentHealthDay = new Date();
   let selectedMealType = 'Breakfast';
+  let selectedBillCategory = null;
+  let billFrequency = 1;
+  let expandedBillId = null;
+  let payingBillId = null;
 
   function fmt(n){
     n = Math.round(n*100)/100;
@@ -919,6 +960,7 @@
           data.workouts = p.workouts || [];
           data.meals = p.meals || [];
           data.calorieTarget = Number(p.calorieTarget) || 0;
+          data.bills = p.bills || [];
         } else if(p.expenses){
           // migrate old expense-only shape
           data.expenseCategories = (p.categories && p.categories.length) ? p.categories : DEFAULT_EXPENSE_CATS;
@@ -1165,6 +1207,159 @@
     });
   }
 
+  /* ---------- Recurring bills ---------- */
+  function renderBillCategoryChips(){
+    const row = document.getElementById('billCategoryChipRow');
+    if(!row) return;
+    row.innerHTML = '';
+    data.expenseCategories.forEach(cat => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip' + (selectedBillCategory===cat ? ' selected-bill' : '');
+      b.textContent = cat;
+      b.addEventListener('click', () => { selectedBillCategory = cat; renderBillCategoryChips(); });
+      row.appendChild(b);
+    });
+  }
+
+  document.getElementById('newBillToggle').addEventListener('click', () => {
+    const form = document.getElementById('newBillForm');
+    form.classList.toggle('open');
+    if(form.classList.contains('open')){
+      document.getElementById('billNextDue').value = todayStr();
+      billFrequency = 1;
+      document.querySelectorAll('#billFreqChipRow .chip').forEach(x => x.classList.toggle('selected-bill', x.dataset.months==='1'));
+      document.getElementById('billFreqCustom').style.display = 'none';
+      document.getElementById('billFreqCustom').value = '';
+      selectedBillCategory = null;
+      renderBillCategoryChips();
+    }
+  });
+
+  document.querySelectorAll('#billFreqChipRow .chip').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#billFreqChipRow .chip').forEach(x => x.classList.toggle('selected-bill', x===b));
+      const custom = document.getElementById('billFreqCustom');
+      if(b.dataset.months === 'custom'){
+        custom.style.display = 'block';
+        billFrequency = Math.max(1, Number(custom.value)) || 1;
+      } else {
+        custom.style.display = 'none';
+        billFrequency = Number(b.dataset.months);
+      }
+    });
+  });
+  document.getElementById('billFreqCustom').addEventListener('input', (e) => {
+    billFrequency = Math.max(1, Number(e.target.value)) || 1;
+  });
+
+  document.getElementById('submitBill').addEventListener('click', async () => {
+    const name = document.getElementById('billName').value.trim();
+    const amount = Number(document.getElementById('billAmount').value);
+    const nextDue = document.getElementById('billNextDue').value || todayStr();
+    if(!name){ showToast('Enter a name first'); return; }
+    if(!(amount > 0)){ showToast('Enter an amount first'); return; }
+    if(!selectedBillCategory){ showToast('Pick a category first'); return; }
+    const id = Date.now();
+    data.bills.push({ id, name, amount, category: selectedBillCategory, frequencyMonths: billFrequency, nextDueDate: nextDue, payments: [] });
+    await saveData();
+    document.getElementById('billName').value = '';
+    document.getElementById('billAmount').value = '';
+    selectedBillCategory = null;
+    document.getElementById('newBillForm').classList.remove('open');
+    showToast(name + ' added');
+    renderBillsList();
+  });
+
+  function billFreqLabel(months){
+    return months===1 ? 'Monthly' : months===3 ? 'Quarterly' : months===6 ? 'Half-yearly' : months===12 ? 'Yearly' : `Every ${months} mo`;
+  }
+
+  function renderBillsList(){
+    const box = document.getElementById('billsList');
+    if(!box) return;
+    if(data.bills.length === 0){
+      box.innerHTML = '<div class="empty-state">No recurring bills yet. Add one above.</div>';
+      return;
+    }
+    const sorted = [...data.bills].sort((a,b) => a.nextDueDate.localeCompare(b.nextDueDate));
+    box.innerHTML = sorted.map(bill => {
+      const isOpen = expandedBillId === bill.id;
+      const overdue = bill.nextDueDate < todayStr();
+      const dueLabel = new Date(bill.nextDueDate+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+      const badge = overdue ? '<span class="inst-badge overdue">Overdue</span>' : '<span class="inst-badge upcoming">Upcoming</span>';
+      const isPaying = payingBillId === bill.id;
+      const paymentRows = (bill.payments||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)).map(p => {
+        const pd = new Date(p.date+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+        return `<div class="workout-session-row">${pd} — ${fmt(p.amount)} (covers ${p.monthsCovered} mo)</div>`;
+      }).join('') || '<div class="workout-session-row" style="font-style:italic; color:var(--ink-soft);">No payments logged yet</div>';
+
+      return `<div class="event-card">
+        <div class="event-top" data-toggle-bill="${bill.id}">
+          <div><div class="event-name">${bill.name} ${badge}</div><div class="event-dates">${billFreqLabel(bill.frequencyMonths)} · ${bill.category}</div></div>
+          <div class="event-total"><div class="amt">${fmt(bill.amount)}</div><div class="lbl">due ${dueLabel}</div></div>
+        </div>
+        <div class="loan-detail ${isOpen?'open':''}">
+          ${paymentRows}
+          ${isPaying ? `
+          <div class="repay-form" style="flex-wrap:wrap; margin-top:10px;">
+            <input type="number" min="0" step="0.01" placeholder="₹0" id="billPayAmt-${bill.id}" value="${bill.amount}">
+            <input type="number" min="1" placeholder="months" id="billPayMonths-${bill.id}" value="${bill.frequencyMonths}" style="width:64px;">
+            <input type="date" id="billPayDate-${bill.id}" value="${todayStr()}">
+            <button type="button" data-confirm-bill-pay="${bill.id}">Mark paid</button>
+          </div>` : `<button type="button" class="repay-person-btn" data-start-bill-pay="${bill.id}" style="margin-top:10px;">Mark paid</button>`}
+          <button class="event-delete-btn" data-delete-bill="${bill.id}">Delete this bill</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    box.querySelectorAll('[data-toggle-bill]').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = Number(el.dataset.toggleBill);
+        expandedBillId = (expandedBillId===id) ? null : id;
+        renderBillsList();
+      });
+    });
+    box.querySelectorAll('[data-start-bill-pay]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        payingBillId = Number(e.currentTarget.dataset.startBillPay);
+        renderBillsList();
+      });
+    });
+    box.querySelectorAll('[data-confirm-bill-pay]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = Number(e.currentTarget.dataset.confirmBillPay);
+        const bill = data.bills.find(b => b.id === id);
+        if(!bill) return;
+        const amt = Number(document.getElementById('billPayAmt-'+id).value) || bill.amount;
+        const months = Math.max(1, Number(document.getElementById('billPayMonths-'+id).value) || bill.frequencyMonths);
+        const payDate = document.getElementById('billPayDate-'+id).value || todayStr();
+        bill.payments = bill.payments || [];
+        bill.payments.push({ id: Date.now(), date: payDate, amount: amt, monthsCovered: months });
+        const nd = new Date(payDate+'T00:00:00');
+        nd.setMonth(nd.getMonth()+months);
+        bill.nextDueDate = nd.getFullYear()+'-'+String(nd.getMonth()+1).padStart(2,'0')+'-'+String(nd.getDate()).padStart(2,'0');
+        data.entries.push({ id: Date.now()+1, type:'expense', date: payDate, category: bill.category, amount: amt, note: bill.name, eventId: null });
+        payingBillId = null;
+        await saveData();
+        showToast(bill.name + ' marked paid — next due ' + new Date(bill.nextDueDate+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'}));
+        renderBillsList();
+        renderOverview();
+      });
+    });
+    box.querySelectorAll('[data-delete-bill]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = Number(e.currentTarget.dataset.deleteBill);
+        data.bills = data.bills.filter(b => b.id !== id);
+        await saveData();
+        expandedBillId = null;
+        renderBillsList();
+      });
+    });
+  }
+
   function renderOverview(){
     const key = monthKey(currentMonth);
     const exp = entriesForMonth(key,'expense');
@@ -1178,6 +1373,7 @@
     netEl.className = 'value ' + (net<0?'neg':'pos');
     renderDonut(categorySpend(exp), data.expenseCategories);
     renderTotalLimit(totalExp);
+    renderBillsList();
     renderCatBreakdown(categorySpend(exp));
   }
 
@@ -1927,6 +2123,11 @@
       items.push({level:'alert', text:`${overdueCount} EMI/chit payment${overdueCount===1?'':'s'} overdue — check the Credit tab.`});
     }
 
+    const overdueBillCount = data.bills.filter(b => b.nextDueDate < todayStr()).length;
+    if(overdueBillCount > 0){
+      items.push({level:'alert', text:`${overdueBillCount} recurring bill${overdueBillCount===1?'':'s'} overdue — check Overview.`});
+    }
+
     data.expenseCategories.forEach(cat => {
       const spent = spendMap[cat]||0;
       const budget = Number(data.budgets[cat])||0;
@@ -2618,6 +2819,7 @@
         data.workouts = parsed.workouts || [];
         data.meals = parsed.meals || [];
         data.calorieTarget = Number(parsed.calorieTarget) || 0;
+        data.bills = parsed.bills || [];
         await saveData();
         showToast('Backup restored');
         location.reload();
