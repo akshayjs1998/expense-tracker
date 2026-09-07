@@ -346,6 +346,16 @@
 
   /* ---- Trips tab ---- */
   .type-toggle button.active.trip{ background: var(--trip); color:#F5F3EB; }
+  .type-toggle button.active.body{ background: var(--health-deep); color:#F5F3EB; }
+  .type-toggle button.active.habits{ background: var(--brass); color:#F5F3EB; }
+
+  .habit-row{ display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:var(--card); border-radius:10px; margin-bottom:8px; cursor:pointer; }
+  .habit-row.done{ background: rgba(76,107,79,0.15); }
+  .habit-row .habit-name{ font-size:14px; font-weight:500; }
+  .habit-row-left{ display:flex; align-items:center; gap:12px; }
+  .habit-check{ width:24px; height:24px; border-radius:50%; border:2px solid var(--rule); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:13px; color:transparent; }
+  .habit-row.done .habit-check{ background:var(--moss); border-color:var(--moss); color:#fff; }
+  .habit-del{ background:none; border:none; color:var(--ink-soft); font-size:12px; cursor:pointer; margin-left:10px; padding:4px; }
   .new-event-form{ background:var(--card); border-radius:12px; padding:14px; margin-bottom:18px; display:none; }
   .new-event-form.open{ display:block; }
   .new-event-form .field-row{ margin-bottom:12px; }
@@ -548,6 +558,31 @@
     </section>
 
     <section class="block">
+      <div class="section-title">Savings goals</div>
+      <button type="button" class="new-loan-toggle" id="newGoalToggle" style="border-color:var(--moss); color:var(--moss-deep);">+ New goal</button>
+      <div class="new-loan-form" id="newGoalForm">
+        <div class="field-row">
+          <label>Goal name</label>
+          <input type="text" id="goalName" placeholder="e.g. Emergency fund" maxlength="40">
+        </div>
+        <div class="field-row">
+          <label>Target amount ₹</label>
+          <input type="number" id="goalTarget" min="0" step="1" placeholder="0">
+        </div>
+        <div class="field-row">
+          <label>Already saved ₹ (optional)</label>
+          <input type="number" id="goalSaved" min="0" step="1" placeholder="0">
+        </div>
+        <div class="field-row">
+          <label>Target date (optional)</label>
+          <input type="date" id="goalDate">
+        </div>
+        <button type="button" class="submit-btn" id="submitGoal" style="background:var(--moss);">Add goal</button>
+      </div>
+      <div id="goalsList"></div>
+    </section>
+
+    <section class="block">
       <div class="section-title">Category budgets</div>
       <div id="catBreakdown"></div>
     </section>
@@ -705,7 +740,7 @@
     </section>
 
     <button type="button" class="print-btn" id="printBtn">Print report</button>
-    <div style="text-align:center; font-size:9.5px; color:var(--ink-soft); margin-top:18px; font-style:italic; font-family:'Fraunces',Georgia,serif;">Build 2026-09-04-07</div>
+    <div style="text-align:center; font-size:9.5px; color:var(--ink-soft); margin-top:18px; font-style:italic; font-family:'Fraunces',Georgia,serif;">Build 2026-09-08-01</div>
   </div>
 
   <!-- TRIPS TAB -->
@@ -734,13 +769,36 @@
       <button type="button" class="submit-btn trip" id="submitEvent">Create</button>
     </div>
     <div id="eventsList"></div>
+
+    <section class="block">
+      <div class="section-title">Vehicle maintenance</div>
+      <button type="button" class="new-event-toggle" id="newVehicleToggle">+ Add vehicle</button>
+      <div class="new-event-form" id="newVehicleForm">
+        <div class="field-row">
+          <label>Vehicle name</label>
+          <input type="text" id="vehicleName" placeholder="e.g. My Bike" maxlength="30">
+        </div>
+        <div class="field-row">
+          <label>Current odometer (km)</label>
+          <input type="number" id="vehicleOdo" min="0" step="1" placeholder="0">
+        </div>
+        <div class="field-row">
+          <label>Service interval (km)</label>
+          <input type="number" id="vehicleInterval" min="0" step="1" placeholder="3000" value="3000">
+        </div>
+        <button type="button" class="submit-btn trip" id="submitVehicle">Add vehicle</button>
+      </div>
+      <div id="vehiclesList"></div>
+    </section>
   </div>
 
   <!-- HEALTH TAB -->
   <div class="screen" id="tab-health">
-    <div class="type-toggle" id="healthToggle">
-      <button type="button" class="workout active" data-htab="workout">Workout</button>
-      <button type="button" class="nutrition" data-htab="nutrition">Nutrition</button>
+    <div class="type-toggle" id="healthToggle" style="padding:2px;">
+      <button type="button" class="workout active" data-htab="workout" style="font-size:12px; padding:8px 0;">Workout</button>
+      <button type="button" class="nutrition" data-htab="nutrition" style="font-size:12px; padding:8px 0;">Nutrition</button>
+      <button type="button" class="body" data-htab="body" style="font-size:12px; padding:8px 0;">Body</button>
+      <button type="button" class="habits" data-htab="habits" style="font-size:12px; padding:8px 0;">Habits</button>
     </div>
 
     <!-- Workout section -->
@@ -834,6 +892,59 @@
       </div>
       <div id="mealsList"></div>
     </div>
+
+    <!-- Body section -->
+    <div id="healthBodySection" style="display:none;">
+      <button type="button" class="new-loan-toggle health-toggle" id="newMeasurementToggle">+ Log measurement</button>
+      <div class="new-loan-form" id="newMeasurementForm">
+        <div class="field-row">
+          <label>Date</label>
+          <input type="date" id="measureDate">
+        </div>
+        <div class="field-row">
+          <label>Weight (kg)</label>
+          <input type="number" id="measureWeight" min="0" step="0.1" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="field-row">
+          <label>Waist (cm, optional)</label>
+          <input type="number" id="measureWaist" min="0" step="0.1" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="field-row">
+          <label>Chest (cm, optional)</label>
+          <input type="number" id="measureChest" min="0" step="0.1" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="field-row">
+          <label>Arms (cm, optional)</label>
+          <input type="number" id="measureArms" min="0" step="0.1" placeholder="0" inputmode="decimal">
+        </div>
+        <button type="button" class="submit-btn health" id="submitMeasurement">Save</button>
+      </div>
+      <div class="stat-cards" id="bodyStatCards" style="display:none;">
+        <div class="stat-card lend"><div class="label">Current weight</div><div class="value" id="bodyCurrentWeight">—</div></div>
+        <div class="stat-card lend"><div class="label">Change since first log</div><div class="value" id="bodyWeightChange">—</div></div>
+      </div>
+      <div id="measurementChart"></div>
+      <div id="measurementHistory"></div>
+    </div>
+
+    <!-- Habits section -->
+    <div id="healthHabitsSection" style="display:none;">
+      <div id="disciplineStreak" style="text-align:center; margin-bottom:18px;"></div>
+      <button type="button" class="new-loan-toggle health-toggle" id="newHabitToggle">+ Add habit</button>
+      <div class="new-loan-form" id="newHabitForm">
+        <div class="field-row">
+          <label>Habit name</label>
+          <input type="text" id="habitNameInput" placeholder="e.g. Drink 3L water" maxlength="30">
+        </div>
+        <button type="button" class="submit-btn health" id="submitHabit">Add habit</button>
+      </div>
+      <div class="day-nav">
+        <button id="prevHabitDay" aria-label="Previous day">‹</button>
+        <span id="habitDayLabel">—</span>
+        <button id="nextHabitDay" aria-label="Next day">›</button>
+      </div>
+      <div id="habitsChecklist"></div>
+    </div>
   </div>
 
   <div class="bottomnav">
@@ -878,7 +989,7 @@
   const DEFAULT_EXPENSE_CATS = ["Food","Transport","Utilities","Rent/EMI","Shopping","Health","Entertainment","Savings/Investment","Business","Other"];
   const DEFAULT_INCOME_CATS = ["Business Income","Salary/Drawings","Investment Returns","Rental Income","Freelance","Other Income"];
 
-  let data = { expenseCategories: [...DEFAULT_EXPENSE_CATS], incomeCategories: [...DEFAULT_INCOME_CATS], budgets: {}, entries: [], loans: [], loanLog: [], totalBudgetOverride: 0, events: [], exercises: [], workouts: [], meals: [], calorieTarget: 0, bills: [] };
+  let data = { expenseCategories: [...DEFAULT_EXPENSE_CATS], incomeCategories: [...DEFAULT_INCOME_CATS], budgets: {}, entries: [], loans: [], loanLog: [], totalBudgetOverride: 0, events: [], exercises: [], workouts: [], meals: [], calorieTarget: 0, bills: [], measurements: [], habitDefs: [], habitLogs: [], goals: [], vehicles: [] };
   let currentMonth = new Date(); currentMonth.setDate(1);
   let currentType = 'expense';
   let selectedCategory = null;
@@ -905,6 +1016,9 @@
   let billFrequency = 1;
   let expandedBillId = null;
   let payingBillId = null;
+  let currentHabitDay = new Date();
+  let expandedGoalId = null;
+  let expandedVehicleId = null;
 
   function fmt(n){
     n = Math.round(n*100)/100;
@@ -961,6 +1075,11 @@
           data.meals = p.meals || [];
           data.calorieTarget = Number(p.calorieTarget) || 0;
           data.bills = p.bills || [];
+          data.measurements = p.measurements || [];
+          data.habitDefs = p.habitDefs || [];
+          data.habitLogs = p.habitLogs || [];
+          data.goals = p.goals || [];
+          data.vehicles = p.vehicles || [];
         } else if(p.expenses){
           // migrate old expense-only shape
           data.expenseCategories = (p.categories && p.categories.length) ? p.categories : DEFAULT_EXPENSE_CATS;
@@ -1007,7 +1126,7 @@
     if(tab === 'lend') renderLend();
     if(tab === 'history') renderHistory();
     if(tab === 'reports') renderReports();
-    if(tab === 'trips') renderTrips();
+    if(tab === 'trips'){ renderTrips(); renderVehiclesList(); }
     if(tab === 'health') renderHealth();
   }
   document.querySelectorAll('.nav-btn').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
@@ -1360,6 +1479,93 @@
     });
   }
 
+  document.getElementById('newGoalToggle').addEventListener('click', () => {
+    const form = document.getElementById('newGoalForm');
+    form.classList.toggle('open');
+  });
+
+  document.getElementById('submitGoal').addEventListener('click', async () => {
+    const name = document.getElementById('goalName').value.trim();
+    const target = Number(document.getElementById('goalTarget').value);
+    const saved = Math.max(0, Number(document.getElementById('goalSaved').value)) || 0;
+    const targetDate = document.getElementById('goalDate').value || null;
+    if(!name){ showToast('Enter a name first'); return; }
+    if(!(target > 0)){ showToast('Enter a target amount first'); return; }
+    const id = Date.now();
+    data.goals.push({ id, name, target, saved: Math.min(saved, target), targetDate });
+    await saveData();
+    document.getElementById('goalName').value = '';
+    document.getElementById('goalTarget').value = '';
+    document.getElementById('goalSaved').value = '';
+    document.getElementById('goalDate').value = '';
+    document.getElementById('newGoalForm').classList.remove('open');
+    showToast(name + ' added');
+    renderGoalsList();
+  });
+
+  function renderGoalsList(){
+    const box = document.getElementById('goalsList');
+    if(!box) return;
+    if(data.goals.length === 0){
+      box.innerHTML = '<div class="empty-state">No savings goals yet. Add one above.</div>';
+      return;
+    }
+    box.innerHTML = data.goals.map(g => {
+      const ratio = g.target > 0 ? Math.min(1, g.saved/g.target) : 0;
+      const remaining = Math.max(0, g.target - g.saved);
+      let paceNote = '';
+      if(g.targetDate){
+        const today = new Date(todayStr()+'T00:00:00');
+        const target = new Date(g.targetDate+'T00:00:00');
+        const monthsLeft = Math.max(1, Math.round((target-today)/(30*86400000)));
+        if(remaining > 0 && target > today){
+          paceNote = `${fmt(remaining)} left · about ${fmt(remaining/monthsLeft)}/mo to hit it by ${target.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}`;
+        } else if(remaining <= 0){
+          paceNote = 'Goal reached!';
+        } else {
+          paceNote = `Target date passed · ${fmt(remaining)} still to go`;
+        }
+      } else if(remaining <= 0){
+        paceNote = 'Goal reached!';
+      } else {
+        paceNote = `${fmt(remaining)} left`;
+      }
+      return `<div class="event-card">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;">
+          <div class="event-name">${g.name}</div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--moss-deep);">${fmt(g.saved)} / ${fmt(g.target)}</div>
+        </div>
+        <div class="bar-track" style="margin-bottom:8px;"><div class="bar-fill" style="width:${ratio*100}%; background:var(--moss);"></div></div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="font-size:10.5px; color:var(--ink-soft);">${paceNote}</div>
+          <div style="display:flex; align-items:center; gap:4px; font-size:11.5px; color:var(--ink-soft);">
+            saved ₹<input type="number" class="budget-input" min="0" step="1" value="${g.saved}" data-goal="${g.id}" style="width:70px;">
+          </div>
+        </div>
+        <button class="event-delete-btn" data-delete-goal="${g.id}">Delete this goal</button>
+      </div>`;
+    }).join('');
+
+    box.querySelectorAll('.budget-input[data-goal]').forEach(inp => {
+      inp.addEventListener('change', async (e) => {
+        const id = Number(e.target.dataset.goal);
+        const g = data.goals.find(x => x.id === id);
+        if(!g) return;
+        g.saved = Math.max(0, Math.min(g.target, Number(e.target.value) || 0));
+        await saveData();
+        renderGoalsList();
+      });
+    });
+    box.querySelectorAll('[data-delete-goal]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = Number(e.currentTarget.dataset.deleteGoal);
+        data.goals = data.goals.filter(g => g.id !== id);
+        await saveData();
+        renderGoalsList();
+      });
+    });
+  }
+
   function renderOverview(){
     const key = monthKey(currentMonth);
     const exp = entriesForMonth(key,'expense');
@@ -1374,6 +1580,7 @@
     renderDonut(categorySpend(exp), data.expenseCategories);
     renderTotalLimit(totalExp);
     renderBillsList();
+    renderGoalsList();
     renderCatBreakdown(categorySpend(exp));
   }
 
@@ -2326,6 +2533,103 @@
     });
   }
 
+  /* ---------- Vehicle maintenance ---------- */
+  document.getElementById('newVehicleToggle').addEventListener('click', () => {
+    document.getElementById('newVehicleForm').classList.toggle('open');
+  });
+
+  document.getElementById('submitVehicle').addEventListener('click', async () => {
+    const name = document.getElementById('vehicleName').value.trim();
+    const odo = Number(document.getElementById('vehicleOdo').value);
+    const interval = Math.max(1, Number(document.getElementById('vehicleInterval').value)) || 3000;
+    if(!name){ showToast('Enter a vehicle name first'); return; }
+    if(!(odo >= 0)){ showToast('Enter the current odometer reading'); return; }
+    const id = Date.now();
+    data.vehicles.push({ id, name, odometer: odo, lastServiceOdo: odo, intervalKm: interval, lastServiceDate: todayStr() });
+    await saveData();
+    document.getElementById('vehicleName').value = '';
+    document.getElementById('vehicleOdo').value = '';
+    document.getElementById('newVehicleForm').classList.remove('open');
+    showToast(name + ' added');
+    renderVehiclesList();
+  });
+
+  function renderVehiclesList(){
+    const box = document.getElementById('vehiclesList');
+    if(!box) return;
+    if(data.vehicles.length === 0){
+      box.innerHTML = '<div class="empty-state">No vehicles yet. Add one above to track service intervals.</div>';
+      return;
+    }
+    box.innerHTML = data.vehicles.map(v => {
+      const sinceService = v.odometer - v.lastServiceOdo;
+      const remaining = v.intervalKm - sinceService;
+      const overdue = remaining < 0;
+      let color = 'var(--moss)';
+      if(overdue) color = 'var(--brick)';
+      else if(remaining <= v.intervalKm*0.15) color = 'var(--amber)';
+      const pct = Math.min(1, sinceService/v.intervalKm);
+      const isOpen = expandedVehicleId === v.id;
+      const lastServiceLabel = new Date(v.lastServiceDate+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+      return `<div class="event-card">
+        <div class="event-top" data-toggle-vehicle="${v.id}">
+          <div><div class="event-name">${v.name}</div><div class="event-dates">Last serviced ${lastServiceLabel} at ${v.lastServiceOdo.toLocaleString('en-IN')} km</div></div>
+          <div class="event-total"><div class="amt" style="color:${color};">${overdue ? Math.abs(remaining).toLocaleString('en-IN')+' km over' : remaining.toLocaleString('en-IN')+' km left'}</div><div class="lbl">service</div></div>
+        </div>
+        <div class="bar-track" style="margin-top:4px;"><div class="bar-fill" style="width:${pct*100}%; background:${color};"></div></div>
+        <div class="loan-detail ${isOpen?'open':''}">
+          <div class="field-row">
+            <label style="font-size:10px;">Current odometer (km)</label>
+            <input type="number" class="budget-input" min="0" step="1" value="${v.odometer}" data-vehicle-odo="${v.id}" style="width:100%; text-align:left; border-bottom:1.5px solid var(--rule);">
+          </div>
+          <div style="font-size:10.5px; color:var(--ink-soft); margin:8px 0 12px;">Service every ${v.intervalKm.toLocaleString('en-IN')} km</div>
+          <button type="button" class="repay-person-btn" data-mark-serviced="${v.id}">Mark serviced now</button>
+          <button class="event-delete-btn" data-delete-vehicle="${v.id}">Delete this vehicle</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    box.querySelectorAll('[data-toggle-vehicle]').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = Number(el.dataset.toggleVehicle);
+        expandedVehicleId = (expandedVehicleId===id) ? null : id;
+        renderVehiclesList();
+      });
+    });
+    box.querySelectorAll('[data-vehicle-odo]').forEach(inp => {
+      inp.addEventListener('change', async (e) => {
+        const id = Number(e.target.dataset.vehicleOdo);
+        const v = data.vehicles.find(x => x.id === id);
+        if(!v) return;
+        v.odometer = Math.max(0, Number(e.target.value)) || 0;
+        await saveData();
+        renderVehiclesList();
+      });
+    });
+    box.querySelectorAll('[data-mark-serviced]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = Number(e.currentTarget.dataset.markServiced);
+        const v = data.vehicles.find(x => x.id === id);
+        if(!v) return;
+        v.lastServiceOdo = v.odometer;
+        v.lastServiceDate = todayStr();
+        await saveData();
+        showToast(v.name + ' marked serviced');
+        renderVehiclesList();
+      });
+    });
+    box.querySelectorAll('[data-delete-vehicle]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = Number(e.currentTarget.dataset.deleteVehicle);
+        data.vehicles = data.vehicles.filter(v => v.id !== id);
+        await saveData();
+        expandedVehicleId = null;
+        renderVehiclesList();
+      });
+    });
+  }
+
   /* ---------- Health tab ---------- */
   function dstr(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
@@ -2335,13 +2639,17 @@
       document.querySelectorAll('#healthToggle button').forEach(x => x.classList.toggle('active', x===b));
       document.getElementById('healthWorkoutSection').style.display = healthView==='workout' ? 'block' : 'none';
       document.getElementById('healthNutritionSection').style.display = healthView==='nutrition' ? 'block' : 'none';
+      document.getElementById('healthBodySection').style.display = healthView==='body' ? 'block' : 'none';
+      document.getElementById('healthHabitsSection').style.display = healthView==='habits' ? 'block' : 'none';
       renderHealth();
     });
   });
 
   function renderHealth(){
     if(healthView === 'workout') renderExerciseList();
-    else renderNutrition();
+    else if(healthView === 'nutrition') renderNutrition();
+    else if(healthView === 'body') renderBody();
+    else if(healthView === 'habits') renderHabits();
   }
 
   /* -- Workout logging -- */
@@ -2757,6 +3065,169 @@
     });
   }
 
+  /* -- Body measurements -- */
+  document.getElementById('newMeasurementToggle').addEventListener('click', () => {
+    const form = document.getElementById('newMeasurementForm');
+    form.classList.toggle('open');
+    if(form.classList.contains('open')){
+      document.getElementById('measureDate').value = todayStr();
+    }
+  });
+
+  document.getElementById('submitMeasurement').addEventListener('click', async () => {
+    const date = document.getElementById('measureDate').value || todayStr();
+    const weight = Number(document.getElementById('measureWeight').value);
+    const waist = Number(document.getElementById('measureWaist').value) || null;
+    const chest = Number(document.getElementById('measureChest').value) || null;
+    const arms = Number(document.getElementById('measureArms').value) || null;
+    if(!(weight > 0)){ showToast('Enter a weight first'); return; }
+    const id = Date.now();
+    data.measurements.push({ id, date, weight, waist, chest, arms });
+    await saveData();
+    document.getElementById('measureWeight').value = '';
+    document.getElementById('measureWaist').value = '';
+    document.getElementById('measureChest').value = '';
+    document.getElementById('measureArms').value = '';
+    document.getElementById('newMeasurementForm').classList.remove('open');
+    showToast('Measurement saved');
+    renderBody();
+  });
+
+  function renderBody(){
+    const statCards = document.getElementById('bodyStatCards');
+    const chartBox = document.getElementById('measurementChart');
+    const historyBox = document.getElementById('measurementHistory');
+    if(data.measurements.length === 0){
+      statCards.style.display = 'none';
+      chartBox.innerHTML = '';
+      historyBox.innerHTML = '<div class="empty-state">No measurements logged yet. Log one above to start tracking.</div>';
+      return;
+    }
+    const sorted = [...data.measurements].sort((a,b) => a.date.localeCompare(b.date) || a.id - b.id);
+    const first = sorted[0], last = sorted[sorted.length-1];
+    statCards.style.display = 'flex';
+    document.getElementById('bodyCurrentWeight').textContent = last.weight + ' kg';
+    const diff = Math.round((last.weight - first.weight)*10)/10;
+    const changeEl = document.getElementById('bodyWeightChange');
+    changeEl.textContent = (diff>0?'+':'') + diff + ' kg';
+    changeEl.className = 'value ' + (diff>0?'pos':(diff<0?'neg':''));
+
+    const chrono = sorted.slice(-15);
+    if(chrono.length >= 2){
+      const points = chrono.map(m => m.weight);
+      const max = Math.max(...points), min = Math.min(...points);
+      const w=300, h=90, pad=10;
+      const range = Math.max(1, max-min);
+      const stepX = (w-2*pad)/(points.length-1);
+      const coords = points.map((p,i) => {
+        const x = pad + i*stepX;
+        const y = h-pad - ((p-min)/range)*(h-2*pad);
+        return [x,y];
+      });
+      const path = coords.map((c,i) => (i===0?'M':'L')+c[0].toFixed(1)+','+c[1].toFixed(1)).join(' ');
+      const dots = coords.map(c => `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="2.5" fill="var(--health-deep)"/>`).join('');
+      chartBox.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="90" style="margin-bottom:16px;"><path d="${path}" fill="none" stroke="var(--health)" stroke-width="2"/>${dots}</svg>`;
+    } else {
+      chartBox.innerHTML = '';
+    }
+
+    const desc = [...sorted].reverse();
+    historyBox.innerHTML = desc.map(m => {
+      const d = new Date(m.date+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+      const extras = [m.waist?`waist ${m.waist}cm`:null, m.chest?`chest ${m.chest}cm`:null, m.arms?`arms ${m.arms}cm`:null].filter(Boolean).join(', ');
+      return `<div class="workout-session-row"><button class="del-btn" data-measurement="${m.id}">✕</button>${d} — ${m.weight}kg${extras?' · '+extras:''}</div>`;
+    }).join('');
+    historyBox.querySelectorAll('.del-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = Number(e.currentTarget.dataset.measurement);
+        data.measurements = data.measurements.filter(m => m.id !== id);
+        await saveData();
+        renderBody();
+      });
+    });
+  }
+
+  /* -- Habits & discipline streak -- */
+  document.getElementById('newHabitToggle').addEventListener('click', () => {
+    document.getElementById('newHabitForm').classList.toggle('open');
+  });
+
+  document.getElementById('submitHabit').addEventListener('click', async () => {
+    const name = document.getElementById('habitNameInput').value.trim();
+    if(!name) return;
+    data.habitDefs.push({ id: Date.now(), name });
+    await saveData();
+    document.getElementById('habitNameInput').value = '';
+    document.getElementById('newHabitForm').classList.remove('open');
+    renderHabits();
+  });
+
+  document.getElementById('prevHabitDay').addEventListener('click', () => { currentHabitDay.setDate(currentHabitDay.getDate()-1); renderHabits(); });
+  document.getElementById('nextHabitDay').addEventListener('click', () => { currentHabitDay.setDate(currentHabitDay.getDate()+1); renderHabits(); });
+
+  function isHabitDone(habitId, dateStr){
+    return data.habitLogs.some(l => l.habitId === habitId && l.date === dateStr);
+  }
+
+  function computeDisciplineStreak(){
+    if(data.habitDefs.length === 0) return 0;
+    let streak = 0;
+    const d = new Date();
+    while(true){
+      const ds = dstr(d);
+      const allDone = data.habitDefs.every(h => isHabitDone(h.id, ds));
+      if(!allDone) break;
+      streak++;
+      d.setDate(d.getDate()-1);
+    }
+    return streak;
+  }
+
+  function renderHabits(){
+    document.getElementById('habitDayLabel').textContent = currentHabitDay.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+    const streak = computeDisciplineStreak();
+    const streakEl = document.getElementById('disciplineStreak');
+    if(data.habitDefs.length === 0){
+      streakEl.innerHTML = '';
+    } else {
+      streakEl.innerHTML = `<div style="font-family:'Fraunces',Georgia,serif; font-size:26px; font-weight:600; color:var(--brass-deep);">${streak}</div><div style="font-size:11px; color:var(--ink-soft);">day discipline streak — all habits done</div>`;
+    }
+    const dayStr = dstr(currentHabitDay);
+    const box = document.getElementById('habitsChecklist');
+    if(data.habitDefs.length === 0){
+      box.innerHTML = '<div class="empty-state">No habits yet. Add one above — water, sleep, meditation, whatever you want to stay consistent on.</div>';
+      return;
+    }
+    box.innerHTML = data.habitDefs.map(h => {
+      const done = isHabitDone(h.id, dayStr);
+      return `<div class="habit-row ${done?'done':''}" data-habit="${h.id}">
+        <div class="habit-row-left"><span class="habit-check">✓</span><span class="habit-name">${h.name}</span></div>
+        <button type="button" class="habit-del" data-del-habit="${h.id}">✕</button>
+      </div>`;
+    }).join('');
+    box.querySelectorAll('.habit-row').forEach(row => {
+      row.addEventListener('click', async (e) => {
+        if(e.target.closest('.habit-del')) return;
+        const habitId = Number(row.dataset.habit);
+        const idx = data.habitLogs.findIndex(l => l.habitId === habitId && l.date === dayStr);
+        if(idx >= 0) data.habitLogs.splice(idx, 1);
+        else data.habitLogs.push({ id: Date.now()+Math.random(), habitId, date: dayStr });
+        await saveData();
+        renderHabits();
+      });
+    });
+    box.querySelectorAll('.habit-del').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const habitId = Number(e.currentTarget.dataset.delHabit);
+        data.habitDefs = data.habitDefs.filter(h => h.id !== habitId);
+        data.habitLogs = data.habitLogs.filter(l => l.habitId !== habitId);
+        await saveData();
+        renderHabits();
+      });
+    });
+  }
+
 
   function getLastBackupDays(){
     try{
@@ -2820,6 +3291,11 @@
         data.meals = parsed.meals || [];
         data.calorieTarget = Number(parsed.calorieTarget) || 0;
         data.bills = parsed.bills || [];
+        data.measurements = parsed.measurements || [];
+        data.habitDefs = parsed.habitDefs || [];
+        data.habitLogs = parsed.habitLogs || [];
+        data.goals = parsed.goals || [];
+        data.vehicles = parsed.vehicles || [];
         await saveData();
         showToast('Backup restored');
         location.reload();
