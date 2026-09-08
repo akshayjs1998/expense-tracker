@@ -741,7 +741,7 @@
     </section>
 
     <button type="button" class="print-btn" id="printBtn">Print report</button>
-    <div style="text-align:center; font-size:9.5px; color:var(--ink-soft); margin-top:18px; font-style:italic; font-family:'Fraunces',Georgia,serif;">Build 2026-09-08-03</div>
+    <div style="text-align:center; font-size:9.5px; color:var(--ink-soft); margin-top:18px; font-style:italic; font-family:'Fraunces',Georgia,serif;">Build 2026-09-08-04</div>
   </div>
 
   <!-- TRIPS TAB -->
@@ -3329,8 +3329,9 @@
     const sleepVals = recent.map(l=>l.sleepHours).filter(v=>v!=null);
     const screenVals = recent.map(l=>l.screenHours).filter(v=>v!=null);
     statCards.style.display = 'flex';
-    document.getElementById('sleepAvgWeek').textContent = sleepVals.length ? (sleepVals.reduce((a,b)=>a+b,0)/sleepVals.length).toFixed(1)+' hrs' : '—';
-    document.getElementById('screenAvgWeek').textContent = screenVals.length ? (screenVals.reduce((a,b)=>a+b,0)/screenVals.length).toFixed(1)+' hrs' : '—';
+    const fmtHrs = (n) => { const r = Math.round(n*100)/100; return (r % 1 === 0 ? r.toFixed(0) : r.toFixed(2).replace(/0$/,'')); };
+    document.getElementById('sleepAvgWeek').textContent = sleepVals.length ? fmtHrs(sleepVals.reduce((a,b)=>a+b,0)/sleepVals.length)+' hrs' : '—';
+    document.getElementById('screenAvgWeek').textContent = screenVals.length ? fmtHrs(screenVals.reduce((a,b)=>a+b,0)/screenVals.length)+' hrs' : '—';
 
     const chrono = sorted.slice(-15);
     sleepChartBox.innerHTML = renderTrendLineChart(chrono.filter(l=>l.sleepHours!=null).map(l=>l.sleepHours), 'var(--health-deep)');
