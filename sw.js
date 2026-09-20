@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ledger-cache-2026-09-08-04';
+const CACHE_NAME = 'ledger-cache-2026-09-20-02';
 const ASSETS = [
   './',
   './index.html',

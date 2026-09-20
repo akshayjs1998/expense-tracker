@@ -741,7 +741,7 @@
     </section>
 
     <button type="button" class="print-btn" id="printBtn">Print report</button>
-    <div style="text-align:center; font-size:9.5px; color:var(--ink-soft); margin-top:18px; font-style:italic; font-family:'Fraunces',Georgia,serif;">Build 2026-09-08-04</div>
+    <div style="text-align:center; font-size:9.5px; color:var(--ink-soft); margin-top:18px; font-style:italic; font-family:'Fraunces',Georgia,serif;">Build 2026-09-20-02</div>
   </div>
 
   <!-- TRIPS TAB -->
@@ -1161,7 +1161,7 @@
     if(tab === 'trips'){ renderTrips(); renderVehiclesList(); }
     if(tab === 'health') renderHealth();
   }
-  document.querySelectorAll('.nav-btn').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+  document.querySelectorAll('.nav-btn').forEach(b => b.addEventListener('click', () => { setTab(b.dataset.tab); maybeAutoBackup(); }));
 
   /* ---------- Add tab ---------- */
   function currentCatList(){ return currentType === 'expense' ? data.expenseCategories : data.incomeCategories; }
@@ -1241,6 +1241,7 @@
     selectedEventId = null;
     document.getElementById('eventTagBox').style.display = 'none';
     document.getElementById('addEventInline').style.display = 'none';
+    maybeAutoBackup();
   });
 
   document.getElementById('eventTagToggle').addEventListener('click', () => {
@@ -3373,20 +3374,44 @@
       : `Last backup: ${days} day${days===1?'':'s'} ago.`;
   }
 
-  document.getElementById('exportBackupBtn').addEventListener('click', () => {
+  const AUTO_BACKUP_INTERVAL_DAYS = 1;
+  let autoBackupTriggeredThisSession = false;
+
+  function performBackupDownload(auto){
     const payload = JSON.stringify(data, null, 2);
     const blob = new Blob([payload], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'ledger-backup-' + todayStr() + '.json';
+    a.download = 'LedgerBackups/' + (auto ? 'ledger-autobackup-' : 'ledger-backup-') + todayStr() + '.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     try{ localStorage.setItem(BACKUP_KEY, Date.now().toString()); }catch(e){}
-    showToast('Backup downloaded — save it somewhere safe');
     renderBackupInfo();
+  }
+
+  function hasAnyRealData(){
+    return data.entries.length>0 || data.loans.length>0 || data.workouts.length>0 ||
+      data.meals.length>0 || data.measurements.length>0 || data.bills.length>0 ||
+      data.goals.length>0 || data.vehicles.length>0 || data.events.length>0;
+  }
+
+  function maybeAutoBackup(){
+    if(autoBackupTriggeredThisSession) return;
+    if(!hasAnyRealData()) return;
+    const days = getLastBackupDays();
+    if(days === null || days >= AUTO_BACKUP_INTERVAL_DAYS){
+      autoBackupTriggeredThisSession = true;
+      performBackupDownload(true);
+      showToast('Backup auto-saved to your Downloads folder');
+    }
+  }
+
+  document.getElementById('exportBackupBtn').addEventListener('click', () => {
+    performBackupDownload(false);
+    showToast('Backup downloaded — save it somewhere safe');
   });
 
   document.getElementById('importBackupBtn').addEventListener('click', () => {
