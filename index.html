@@ -4021,7 +4021,7 @@ onAuthStateChanged(auth, async (user) => {
     (data.chores||[]).forEach(c=>{ if(c.due) items.push({date:c.due, kind:'chore', label:c.name+' · '+c.freq, color:'var(--moss)', cid:c.id}); });
     (data.bills||[]).forEach(b=>{ if(b.nextDueDate) items.push({date:b.nextDueDate, kind:'bill', label:b.name+' '+fmt(b.amount), color:'var(--amber)'}); });
     (data.goals||[]).forEach(g=>{ if(g.targetDate) items.push({date:g.targetDate, kind:'goal', label:'Goal: '+g.name, color:'var(--brass-deep)'}); });
-    (data.events||[]).forEach(ev=>{ if(ev.startDate){ const end=ev.endDate||ev.startDate; const span=end!==ev.startDate?(' → '+pdParse(end).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})):''; items.push({date:ev.startDate, kind:'event', label:(ev.type==='trip'?'Trip: ':'')+ev.name+span, color:(ev.type==='trip'?'var(--trip)':'var(--slate)')}); } });
+    (data.events||[]).forEach(ev=>{ if(ev.startDate){ const end=ev.endDate||ev.startDate; if(end < t) return; const span=end!==ev.startDate?(' → '+pdParse(end).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})):''; const ongoing=ev.startDate < t; items.push({date: ongoing ? t : ev.startDate, kind:'event', ongoing, label:(ev.type==='trip'?'Trip: ':'')+ev.name+span, color:(ev.type==='trip'?'var(--trip)':'var(--slate)')}); } });
     items.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
     const names=['Overdue','Today','Next 7 days','This month','Later'];
     const groups=[[],[],[],[],[]];
@@ -4034,7 +4034,7 @@ onAuthStateChanged(auth, async (user) => {
       if(!g.length) return;
       html+=`<div class="section-title">${names[i]}</div>`;
       html+=g.map(it=>{
-        const dl = it.date===t?'today':pdParse(it.date).toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short'});
+        const dl = it.ongoing ? 'ongoing' : (it.date===t?'today':pdParse(it.date).toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short'}));
         const done = it.kind==='chore' ? `<button class="gc-done ag-done" data-agchore="${it.cid}">Done</button>` : '';
         return `<div class="ag-row"><span class="cal-dot" style="background:${it.color}"></span><div class="ag-main"><span class="gc-name">${gcEsc(it.label)}</span><span class="ag-date">${dl}</span></div>${done}</div>`;
       }).join('');
