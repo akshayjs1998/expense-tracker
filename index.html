@@ -645,7 +645,7 @@
     </section>
 
     <section class="block">
-      <div class="section-title">Savings goals</div>
+      <div class="section-title">Goals</div>
       <button type="button" class="new-loan-toggle" id="newGoalToggle" style="border-color:var(--moss); color:var(--moss-deep);">+ New goal</button>
       <div class="new-loan-form" id="newGoalForm">
         <div class="field-row">
@@ -653,12 +653,16 @@
           <input type="text" id="goalName" placeholder="e.g. Emergency fund" maxlength="40">
         </div>
         <div class="field-row">
-          <label>Target amount ₹</label>
-          <input type="number" id="goalTarget" min="0" step="1" placeholder="0">
+          <label>Unit</label>
+          <input type="text" id="goalUnit" value="₹" placeholder="₹, kg, reps, km, min…" maxlength="8">
         </div>
         <div class="field-row">
-          <label>Already saved ₹ (optional)</label>
-          <input type="number" id="goalSaved" min="0" step="1" placeholder="0">
+          <label>Starting value (where you are now)</label>
+          <input type="number" id="goalStart" step="any" placeholder="0">
+        </div>
+        <div class="field-row">
+          <label>Target value</label>
+          <input type="number" id="goalTarget" step="any" placeholder="0">
         </div>
         <div class="field-row">
           <label>Target date (optional)</label>
@@ -1810,60 +1814,70 @@ onAuthStateChanged(auth, async (user) => {
 
   document.getElementById('submitGoal').addEventListener('click', async () => {
     const name = document.getElementById('goalName').value.trim();
+    const unit = document.getElementById('goalUnit').value.trim() || '₹';
+    const start = Number(document.getElementById('goalStart').value) || 0;
     const target = Number(document.getElementById('goalTarget').value);
-    const saved = Math.max(0, Number(document.getElementById('goalSaved').value)) || 0;
     const targetDate = document.getElementById('goalDate').value || null;
     if(!name){ showToast('Enter a name first'); return; }
-    if(!(target > 0)){ showToast('Enter a target amount first'); return; }
+    if(!Number.isFinite(target) || target === start){ showToast('Enter a target different from the start'); return; }
     const id = Date.now();
-    data.goals.push({ id, name, target, saved: Math.min(saved, target), targetDate });
+    data.goals.push({ id, name, unit, start, current: start, target, targetDate });
     await saveData();
     document.getElementById('goalName').value = '';
+    document.getElementById('goalUnit').value = '₹';
+    document.getElementById('goalStart').value = '';
     document.getElementById('goalTarget').value = '';
-    document.getElementById('goalSaved').value = '';
     document.getElementById('goalDate').value = '';
     document.getElementById('newGoalForm').classList.remove('open');
     showToast(name + ' added');
     renderGoalsList();
   });
 
+  function goalUnitOf(g){ return g.unit || '₹'; }
+  function goalFmt(v, unit){ v = Number(v)||0; if(!unit || unit==='₹') return fmt(v); if(unit==='%') return (Math.round(v*100)/100)+'%'; return v.toLocaleString('en-IN') + ' ' + unit; }
+  function goalProgress(g){
+    const start = (g.start!=null) ? Number(g.start) : 0;
+    const target = Number(g.target)||0;
+    const current = (g.current!=null) ? Number(g.current) : ((g.saved!=null) ? Number(g.saved) : start);
+    const denom = target - start;
+    let ratio = denom!==0 ? (current-start)/denom : (current>=target?1:0);
+    ratio = Math.max(0, Math.min(1, ratio));
+    const reached = denom>=0 ? current>=target : current<=target;
+    const remaining = Math.abs(target - current);
+    return { start, target, current, ratio, reached, remaining };
+  }
+
   function renderGoalsList(){
     const box = document.getElementById('goalsList');
     if(!box) return;
     if(data.goals.length === 0){
-      box.innerHTML = '<div class="empty-state">No savings goals yet. Add one above.</div>';
+      box.innerHTML = '<div class="empty-state">No goals yet. Add one above.</div>';
       return;
     }
     box.innerHTML = data.goals.map(g => {
-      const ratio = g.target > 0 ? Math.min(1, g.saved/g.target) : 0;
-      const remaining = Math.max(0, g.target - g.saved);
-      let paceNote = '';
+      const unit = goalUnitOf(g);
+      const pr = goalProgress(g);
+      let paceNote;
       if(g.targetDate){
         const today = new Date(todayStr()+'T00:00:00');
-        const target = new Date(g.targetDate+'T00:00:00');
-        const monthsLeft = Math.max(1, Math.round((target-today)/(30*86400000)));
-        if(remaining > 0 && target > today){
-          paceNote = `${fmt(remaining)} left · about ${fmt(remaining/monthsLeft)}/mo to hit it by ${target.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}`;
-        } else if(remaining <= 0){
-          paceNote = 'Goal reached!';
-        } else {
-          paceNote = `Target date passed · ${fmt(remaining)} still to go`;
-        }
-      } else if(remaining <= 0){
-        paceNote = 'Goal reached!';
-      } else {
-        paceNote = `${fmt(remaining)} left`;
-      }
+        const tgt = new Date(g.targetDate+'T00:00:00');
+        const monthsLeft = Math.max(1, Math.round((tgt-today)/(30*86400000)));
+        if(pr.reached){ paceNote = 'Goal reached!'; }
+        else if(tgt > today){
+          const rate = (unit==='₹') ? ` · about ${goalFmt(pr.remaining/monthsLeft, unit)}/mo` : '';
+          paceNote = `${goalFmt(pr.remaining, unit)} to go${rate} · by ${tgt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}`;
+        } else { paceNote = `Target date passed · ${goalFmt(pr.remaining, unit)} still to go`; }
+      } else { paceNote = pr.reached ? 'Goal reached!' : `${goalFmt(pr.remaining, unit)} to go`; }
       return `<div class="event-card">
         <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;">
           <div class="event-name">${g.name}</div>
-          <div style="font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--moss-deep);">${fmt(g.saved)} / ${fmt(g.target)}</div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--moss-deep);">${goalFmt(pr.current, unit)} / ${goalFmt(pr.target, unit)}</div>
         </div>
-        <div class="bar-track" style="margin-bottom:8px;"><div class="bar-fill" style="width:${ratio*100}%; background:var(--moss);"></div></div>
+        <div class="bar-track" style="margin-bottom:8px;"><div class="bar-fill" style="width:${pr.ratio*100}%; background:var(--moss);"></div></div>
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div style="font-size:10.5px; color:var(--ink-soft);">${paceNote}</div>
           <div style="display:flex; align-items:center; gap:4px; font-size:11.5px; color:var(--ink-soft);">
-            saved ₹<input type="number" class="budget-input" min="0" step="1" value="${g.saved}" data-goal="${g.id}" style="width:70px;">
+            now <input type="number" class="budget-input" step="any" value="${pr.current}" data-goal="${g.id}" style="width:76px;"> ${unit==='₹'?'':unit}
           </div>
         </div>
         <button class="event-delete-btn" data-delete-goal="${g.id}">Delete this goal</button>
@@ -1875,7 +1889,7 @@ onAuthStateChanged(auth, async (user) => {
         const id = Number(e.target.dataset.goal);
         const g = data.goals.find(x => x.id === id);
         if(!g) return;
-        g.saved = Math.max(0, Math.min(g.target, Number(e.target.value) || 0));
+        g.current = Number(e.target.value) || 0;
         await saveData();
         renderGoalsList();
       });
@@ -4063,18 +4077,17 @@ onAuthStateChanged(auth, async (user) => {
   function renderGoals(){
     const box=document.getElementById('planGoals');
     const goals=data.goals||[];
-    if(!goals.length){ box.innerHTML='<div class="cal-empty">No savings goals yet.</div>'; return; }
+    if(!goals.length){ box.innerHTML='<div class="cal-empty">No goals yet.</div>'; return; }
     const t=todayStr();
     box.innerHTML=goals.map(g=>{
-      const target=Number(g.target)||0, saved=Math.min(Number(g.saved)||0, target||Number(g.saved)||0);
-      const pct= target>0 ? Math.min(100, Math.round(saved/target*100)) : 0;
+      const unit=goalUnitOf(g); const pr=goalProgress(g); const pct=Math.round(pr.ratio*100);
       let sub;
       if(g.targetDate){
-        const daysLeft=pdDiff(t, g.targetDate); const remain=Math.max(0, target-saved);
-        if(remain<=0) sub='Reached ✓';
-        else if(daysLeft>0){ const perMonth=remain/Math.max(0.5, daysLeft/30); sub=`${daysLeft}d left · ${fmt(remain)} to go · ~${fmt(Math.round(perMonth))}/mo`; }
-        else sub=`Overdue · ${fmt(remain)} short`;
-      } else { sub=`${fmt(saved)} of ${fmt(target)}`; }
+        const daysLeft=pdDiff(t, g.targetDate);
+        if(pr.reached) sub='Reached';
+        else if(daysLeft>0){ const rate=(unit==='₹')?` · ~${goalFmt(pr.remaining/Math.max(0.5,daysLeft/30), unit)}/mo`:''; sub=`${daysLeft}d left · ${goalFmt(pr.remaining, unit)} to go${rate}`; }
+        else sub=`Overdue · ${goalFmt(pr.remaining, unit)} to go`;
+      } else { sub= pr.reached ? 'Reached' : `${goalFmt(pr.current, unit)} of ${goalFmt(pr.target, unit)}`; }
       return `<div class="goal-card"><div class="goal-top"><span class="goal-name">${gcEsc(g.name)}</span><span class="goal-pct">${pct}%</span></div><div class="goal-track"><div class="goal-fill" style="width:${pct}%"></div></div><div class="goal-sub">${sub}</div></div>`;
     }).join('');
   }
