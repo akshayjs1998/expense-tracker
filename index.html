@@ -436,6 +436,92 @@
     .print-btn{ display:none; }
     #backupInfo{ display:none; }
   }
+  /* Home: grocery & chores */
+  .chip.selected-home{ background:var(--moss); color:#F5F3EB; border-color:var(--moss); }
+  .gc-add{ display:flex; gap:8px; align-items:center; }
+  .gc-add #gItemName{ flex:1; }
+  .gc-add #gItemQty{ width:64px; }
+  .gc-btn{ border:none; background:var(--moss); color:#F5F3EB; border-radius:9px; padding:9px 15px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; flex-shrink:0; }
+  .gc-btn:active{ background:var(--moss-deep); }
+  .gc-check{ display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--ink-soft); margin-top:12px; }
+  .gc-check input{ width:auto; }
+  .gc-row{ display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px dotted var(--rule); }
+  .gc-row:last-child{ border-bottom:none; }
+  .gc-row label{ display:flex; align-items:center; gap:10px; flex:1; cursor:pointer; margin:0; font-size:13.5px; }
+  .gc-row input[type=checkbox]{ width:auto; flex-shrink:0; }
+  .gc-name em{ font-style:normal; color:var(--ink-soft); font-size:12px; margin-left:5px; }
+  .gc-bought .gc-name{ text-decoration:line-through; color:var(--ink-soft); }
+  .gc-sub{ font-size:11px; color:var(--ink-soft); white-space:nowrap; }
+  .gc-sub.over{ color:var(--brick); font-weight:600; }
+  .gc-done{ border:none; background:var(--moss); color:#F5F3EB; border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer; font-weight:600; flex-shrink:0; }
+  .gc-done:active{ background:var(--moss-deep); }
+  .gc-del{ background:none; border:none; color:var(--ink-soft); font-size:13px; cursor:pointer; padding:2px 6px; flex-shrink:0; }
+  .gc-del:active{ color:var(--brick); }
+  .gc-empty{ font-size:12px; color:var(--ink-soft); padding:8px 2px; }
+  /* Plan: calendar + timeline */
+  .cal-head{ display:flex;align-items:center;justify-content:space-between;margin-bottom:14px; }
+  .cal-mlabel{ font-family:'Fraunces',Georgia,serif;font-size:16px;font-weight:600;color:var(--ink); }
+  .cal-nav-btn{ background:none;border:1px solid var(--rule);border-radius:8px;color:var(--ink);width:32px;height:32px;cursor:pointer;font-size:16px;line-height:1; }
+  .cal-nav-btn:active{ background:var(--paper-alt); }
+  .cal-grid{ display:grid;grid-template-columns:repeat(7,1fr);gap:3px; }
+  .cal-dow{ text-align:center;font-size:9.5px;color:var(--ink-soft);font-weight:600; }
+  .cal-cell{ aspect-ratio:1/1;border:1px solid var(--rule-soft);border-radius:8px;padding:3px;display:flex;flex-direction:column;gap:3px;cursor:pointer;background:var(--card);overflow:hidden; }
+  .cal-cell.other{ opacity:0.4; }
+  .cal-cell.today{ border-color:var(--brass-deep);border-width:1.5px; }
+  .cal-cell.sel{ background:var(--paper-alt);border-color:var(--brass-deep); }
+  .cal-daynum{ font-size:10.5px;color:var(--ink);font-family:'IBM Plex Mono',monospace; }
+  .cal-dots{ display:flex;flex-wrap:wrap;gap:2px; }
+  .cal-dot{ width:6px;height:6px;border-radius:50%;flex-shrink:0; }
+  .cal-detail{ margin-top:18px; }
+  .cal-ev{ display:flex;align-items:center;gap:9px;padding:9px 2px;border-bottom:1px dotted var(--rule);font-size:13px;color:var(--ink); }
+  .cal-ev:last-child{ border-bottom:none; }
+  .cal-ev .cal-dot{ width:9px;height:9px; }
+  .cal-empty{ font-size:12px;color:var(--ink-soft);padding:8px 2px; }
+  .cal-legrow{ display:flex;flex-wrap:wrap;gap:14px;margin-top:16px; }
+  .cal-leg{ display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--ink-soft); }
+  .tl-hint{ font-size:11px;color:var(--ink-soft);margin-bottom:10px; }
+  .tl-wrap{ overflow-x:auto;border:1px solid var(--rule-soft);border-radius:10px;-webkit-overflow-scrolling:touch; }
+  .tl-inner{ position:relative; }
+  .tl-row{ display:flex;align-items:center;height:34px;border-bottom:1px dotted var(--rule-soft); }
+  .tl-row:last-child{ border-bottom:none; }
+  .tl-axisrow{ height:26px;border-bottom:1px solid var(--rule); }
+  .tl-label{ position:sticky;left:0;width:104px;flex-shrink:0;background:var(--card);font-size:11.5px;color:var(--ink);padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:100%;display:flex;align-items:center;border-right:1px solid var(--rule-soft);z-index:2; }
+  .tl-track{ position:relative;height:100%;flex-shrink:0; }
+  .tl-bar{ position:absolute;top:9px;height:16px;border-radius:5px;display:flex;align-items:center;padding:0 6px;font-size:10px;color:#F5F3EB;white-space:nowrap;overflow:hidden; }
+  .tl-mile{ position:absolute;top:9px;width:14px;height:14px;transform:rotate(45deg);border-radius:3px; }
+  .tl-tick{ position:absolute;top:4px;font-size:9px;color:var(--ink-soft);padding-left:3px;border-left:1px solid var(--rule-soft);height:18px; }
+  /* Plan: agenda / forecast / goals / heatmap */
+  .ag-row{ display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px dotted var(--rule); }
+  .ag-row:last-child{ border-bottom:none; }
+  .ag-main{ flex:1;display:flex;flex-direction:column;gap:2px;min-width:0; }
+  .ag-main .gc-name{ white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .ag-date{ font-size:11px;color:var(--ink-soft); }
+  .ag-done{ flex-shrink:0; }
+  .fc-chart{ display:flex;align-items:flex-end;gap:8px;height:172px;padding:8px 2px 0; }
+  .fc-col{ flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:100%; }
+  .fc-bar{ width:72%;max-width:36px;background:var(--amber);border-radius:5px 5px 0 0;min-height:2px; }
+  .fc-val{ font-size:9.5px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace; }
+  .fc-lbl{ font-size:10px;color:var(--ink-soft); }
+  .goal-card{ padding:12px 0;border-bottom:1px dotted var(--rule); }
+  .goal-card:last-child{ border-bottom:none; }
+  .goal-top{ display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px; }
+  .goal-name{ font-size:14px;color:var(--ink);font-weight:500; }
+  .goal-pct{ font-size:12px;color:var(--moss-deep);font-family:'IBM Plex Mono',monospace; }
+  .goal-track{ height:8px;background:var(--rule-soft);border-radius:5px;overflow:hidden; }
+  .goal-fill{ height:100%;background:var(--moss);border-radius:5px; }
+  .goal-sub{ font-size:11px;color:var(--ink-soft);margin-top:6px; }
+  .hm-wrap{ overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px; }
+  .hm-grid{ display:flex;gap:3px; }
+  .hm-col{ display:flex;flex-direction:column;gap:3px; }
+  .hm-cell{ width:13px;height:13px;border-radius:3px;background:var(--rule-soft);display:inline-block;flex-shrink:0; }
+  .hm-l0{ background:var(--rule-soft); }
+  .hm-l1{ background:#cfe0cf; }
+  .hm-l2{ background:#9cc39f; }
+  .hm-l3{ background:var(--moss); }
+  .hm-l4{ background:var(--moss-deep); }
+  .hm-future{ background:transparent;border:1px dashed var(--rule-soft); }
+  .hm-legend{ display:flex;align-items:center;gap:4px;font-size:10px;color:var(--ink-soft);margin-top:12px; }
+  .hm-legend .hm-cell{ width:11px;height:11px; }
 </style>
 </head>
 <body>
@@ -984,6 +1070,80 @@
     </div>
   </div>
 
+  <div class="screen" id="tab-home">
+    <div class="chip-row" id="homeToggle" style="margin-bottom:20px;">
+      <button type="button" class="chip selected-home" data-home="grocery">Grocery</button>
+      <button type="button" class="chip" data-home="chores">Chores</button>
+    </div>
+
+    <div id="homeGrocerySection">
+      <div class="field-row">
+        <label>Add item</label>
+        <div class="gc-add">
+          <input type="text" id="gItemName" placeholder="Item">
+          <input type="text" id="gItemQty" placeholder="Qty">
+          <button type="button" class="gc-btn" id="gAddBtn">Add</button>
+        </div>
+        <label class="gc-check"><input type="checkbox" id="gItemStaple"> Staple (keep for quick restock)</label>
+      </div>
+      <div class="section-title">To buy</div>
+      <div id="gToBuyList"></div>
+      <div class="section-title" id="gStaplesTitle" style="display:none;">Restock staples</div>
+      <div class="chip-row" id="gStaplesRow" style="margin-bottom:8px; display:none;"></div>
+      <div class="section-title">Recently bought</div>
+      <div id="gBoughtList"></div>
+    </div>
+
+    <div id="homeChoresSection" style="display:none;">
+      <div class="field-row">
+        <label>Add chore</label>
+        <input type="text" id="cChoreName" placeholder="e.g. Gas cylinder, Clean kitchen">
+        <div class="chip-row" id="cFreqRow" style="margin-top:10px;">
+          <button type="button" class="chip" data-freq="daily">Daily</button>
+          <button type="button" class="chip selected-home" data-freq="weekly">Weekly</button>
+          <button type="button" class="chip" data-freq="monthly">Monthly</button>
+          <button type="button" class="chip" data-freq="once">One-off</button>
+        </div>
+        <button type="button" class="gc-btn" id="cAddBtn" style="margin-top:12px;">Add chore</button>
+      </div>
+      <div class="section-title">Due &amp; upcoming</div>
+      <div id="cList"></div>
+    </div>
+  </div>
+
+  <div class="screen" id="tab-plan">
+    <div class="chip-row" id="planToggle" style="margin-bottom:18px;">
+      <button type="button" class="chip selected-home" data-plan="agenda">Agenda</button>
+      <button type="button" class="chip" data-plan="calendar">Calendar</button>
+      <button type="button" class="chip" data-plan="forecast">Forecast</button>
+      <button type="button" class="chip" data-plan="goals">Goals</button>
+      <button type="button" class="chip" data-plan="habits">Habits</button>
+      <button type="button" class="chip" data-plan="timeline">Timeline</button>
+    </div>
+    <div id="planAgenda"></div>
+    <div id="planForecast" style="display:none;"></div>
+    <div id="planGoals" style="display:none;"></div>
+    <div id="planHabits" style="display:none;"></div>
+
+    <div id="planCalendar" style="display:none;">
+      <div class="cal-head">
+        <button type="button" class="cal-nav-btn" id="planPrev">‹</button>
+        <span class="cal-mlabel" id="planMonthLabel">—</span>
+        <button type="button" class="cal-nav-btn" id="planNext">›</button>
+      </div>
+      <div class="cal-grid" id="calDow"></div>
+      <div class="cal-grid" id="calGrid" style="margin-top:3px;"></div>
+      <div class="cal-detail" id="calDetail"></div>
+      <div id="calLegend"></div>
+    </div>
+
+    <div id="planTimeline" style="display:none;">
+      <div class="tl-hint">Next 10 weeks — trips show as bars, single dates as markers. Scroll sideways.</div>
+      <div class="tl-wrap" id="tlWrap"></div>
+      <div id="tlLegend"></div>
+    </div>
+  </div>
+
   <div class="bottomnav">
     <button class="nav-btn active" data-tab="add">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
@@ -1012,6 +1172,14 @@
     <button class="nav-btn" data-tab="health">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
       <span>Health</span>
+    </button>
+    <button class="nav-btn" data-tab="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.3 12.2a1.6 1.6 0 0 0 1.6 1.3h8.8a1.6 1.6 0 0 0 1.6-1.3L21.5 7H6"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="nav-btn" data-tab="plan">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4.5" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/></svg>
+      <span>Plan</span>
     </button>
   </div>
 
@@ -1130,7 +1298,7 @@ onAuthStateChanged(auth, async (user) => {
   const DEFAULT_EXPENSE_CATS = ["Food","Transport","Utilities","Rent/EMI","Shopping","Health","Entertainment","Savings/Investment","Business","Other"];
   const DEFAULT_INCOME_CATS = ["Business Income","Salary/Drawings","Investment Returns","Rental Income","Freelance","Other Income"];
 
-  let data = { expenseCategories: [...DEFAULT_EXPENSE_CATS], incomeCategories: [...DEFAULT_INCOME_CATS], budgets: {}, entries: [], loans: [], loanLog: [], totalBudgetOverride: 0, events: [], exercises: [], workouts: [], meals: [], calorieTarget: 0, bills: [], measurements: [], habitDefs: [], habitLogs: [], goals: [], vehicles: [], sleepScreenLogs: [] };
+  let data = { expenseCategories: [...DEFAULT_EXPENSE_CATS], incomeCategories: [...DEFAULT_INCOME_CATS], budgets: {}, entries: [], loans: [], loanLog: [], totalBudgetOverride: 0, events: [], exercises: [], workouts: [], meals: [], calorieTarget: 0, bills: [], measurements: [], habitDefs: [], habitLogs: [], goals: [], vehicles: [], sleepScreenLogs: [], groceries: [], chores: [] };
   let currentMonth = new Date(); currentMonth.setDate(1);
   let currentType = 'expense';
   let selectedCategory = null;
@@ -1227,6 +1395,8 @@ onAuthStateChanged(auth, async (user) => {
           data.goals = p.goals || [];
           data.vehicles = p.vehicles || [];
           data.sleepScreenLogs = p.sleepScreenLogs || [];
+          data.groceries = p.groceries || [];
+          data.chores = p.chores || [];
         } else if(p.expenses){
           // migrate old expense-only shape
           data.expenseCategories = (p.categories && p.categories.length) ? p.categories : DEFAULT_EXPENSE_CATS;
@@ -1268,13 +1438,15 @@ onAuthStateChanged(auth, async (user) => {
   function setTab(tab){
     document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'tab-'+tab));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-    document.getElementById('monthNavEl').style.visibility = (tab === 'lend' || tab === 'trips' || tab === 'health') ? 'hidden' : 'visible';
+    document.getElementById('monthNavEl').style.visibility = (tab === 'lend' || tab === 'trips' || tab === 'health' || tab === 'home' || tab === 'plan') ? 'hidden' : 'visible';
     if(tab === 'overview') renderOverview();
     if(tab === 'lend') renderLend();
     if(tab === 'history') renderHistory();
     if(tab === 'reports') renderReports();
     if(tab === 'trips'){ renderTrips(); renderVehiclesList(); }
     if(tab === 'health') renderHealth();
+    if(tab === 'home') renderHome();
+    if(tab === 'plan') renderPlan();
   }
   document.querySelectorAll('.nav-btn').forEach(b => b.addEventListener('click', () => { setTab(b.dataset.tab); maybeAutoBackup(); }));
 
@@ -3510,7 +3682,8 @@ onAuthStateChanged(auth, async (user) => {
   function hasAnyRealData(){
     return data.entries.length>0 || data.loans.length>0 || data.workouts.length>0 ||
       data.meals.length>0 || data.measurements.length>0 || data.bills.length>0 ||
-      data.goals.length>0 || data.vehicles.length>0 || data.events.length>0;
+      data.goals.length>0 || data.vehicles.length>0 || data.events.length>0 ||
+      data.groceries.length>0 || data.chores.length>0;
   }
 
   function maybeAutoBackup(){
@@ -3564,6 +3737,8 @@ onAuthStateChanged(auth, async (user) => {
         data.goals = parsed.goals || [];
         data.vehicles = parsed.vehicles || [];
         data.sleepScreenLogs = parsed.sleepScreenLogs || [];
+        data.groceries = parsed.groceries || [];
+        data.chores = parsed.chores || [];
         await saveData();
         showToast('Backup restored');
         location.reload();
@@ -3585,6 +3760,342 @@ onAuthStateChanged(auth, async (user) => {
   }
   document.getElementById('prevMonth').addEventListener('click', () => { currentMonth.setMonth(currentMonth.getMonth()-1); renderMonthLabel(); refreshActiveTab(); });
   document.getElementById('nextMonth').addEventListener('click', () => { currentMonth.setMonth(currentMonth.getMonth()+1); renderMonthLabel(); refreshActiveTab(); });
+
+  /* ---------- Home: Grocery & Chores (stored in the cloud-synced data blob) ---------- */
+  let homeTab = 'grocery';
+  let choreFreq = 'weekly';
+  function gcUid(){ return Date.now() + Math.floor(Math.random()*1000); }
+  function gcEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  function renderHome(){
+    document.getElementById('homeGrocerySection').style.display = homeTab==='grocery' ? 'block' : 'none';
+    document.getElementById('homeChoresSection').style.display = homeTab==='chores' ? 'block' : 'none';
+    document.querySelectorAll('#homeToggle .chip').forEach(c => c.classList.toggle('selected-home', c.dataset.home===homeTab));
+    if(homeTab==='grocery') renderGrocery(); else renderChores();
+  }
+
+  function renderGrocery(){
+    const toBuy = data.groceries.filter(g => !g.bought);
+    const bought = data.groceries.filter(g => g.bought).slice(-8).reverse();
+    const buyBox = document.getElementById('gToBuyList');
+    buyBox.innerHTML = toBuy.length ? toBuy.map(g => `
+      <div class="gc-row">
+        <label><input type="checkbox" data-gbuy="${g.id}"><span class="gc-name">${gcEsc(g.name)}${g.qty?`<em>×${gcEsc(g.qty)}</em>`:''}${g.staple?'<em>· staple</em>':''}</span></label>
+        <button class="gc-del" data-gdel="${g.id}">✕</button>
+      </div>`).join('') : '<div class="gc-empty">Nothing on the list.</div>';
+
+    const onList = new Set(toBuy.map(g => (g.name||'').toLowerCase()));
+    const staples = [...new Map(data.groceries.filter(g=>g.staple).map(g=>[(g.name||'').toLowerCase(), g])).values()]
+      .filter(g => !onList.has((g.name||'').toLowerCase()));
+    const stTitle = document.getElementById('gStaplesTitle');
+    const stRow = document.getElementById('gStaplesRow');
+    if(staples.length){
+      stTitle.style.display='block'; stRow.style.display='flex';
+      stRow.innerHTML = staples.map(g => `<button type="button" class="chip" data-grestock="${gcEsc(g.name)}">+ ${gcEsc(g.name)}</button>`).join('');
+      stRow.querySelectorAll('[data-grestock]').forEach(b => b.onclick = async () => {
+        data.groceries.push({ id:gcUid(), name:b.dataset.grestock, qty:'', staple:true, bought:false, ts:Date.now() });
+        await saveData(); renderGrocery();
+      });
+    } else { stTitle.style.display='none'; stRow.style.display='none'; stRow.innerHTML=''; }
+
+    const boughtBox = document.getElementById('gBoughtList');
+    boughtBox.innerHTML = bought.length ? bought.map(g => `
+      <div class="gc-row gc-bought">
+        <span class="gc-name">${gcEsc(g.name)}</span>
+        <button class="gc-del" data-gundo="${g.id}">undo</button>
+      </div>`).join('') : '<div class="gc-empty">—</div>';
+
+    buyBox.querySelectorAll('[data-gbuy]').forEach(cb => cb.onchange = () => markGroceryBought(Number(cb.dataset.gbuy)));
+    buyBox.querySelectorAll('[data-gdel]').forEach(b => b.onclick = async () => {
+      data.groceries = data.groceries.filter(g => g.id !== Number(b.dataset.gdel)); await saveData(); renderGrocery();
+    });
+    boughtBox.querySelectorAll('[data-gundo]').forEach(b => b.onclick = async () => {
+      const g = data.groceries.find(x => x.id === Number(b.dataset.gundo)); if(g){ g.bought=false; await saveData(); renderGrocery(); }
+    });
+  }
+
+  async function markGroceryBought(id){
+    const g = data.groceries.find(x => x.id === id); if(!g) return;
+    g.bought = true;
+    const amtStr = prompt(`Bought "${g.name}". Amount spent? (leave blank to skip logging)`);
+    await saveData();
+    const amt = parseFloat(amtStr);
+    if(amt && amt > 0){
+      data.entries.push({ id:gcUid(), type:'expense', date:todayStr(), category:'Food', amount:amt, note:g.name });
+      await saveData();
+      showToast('Logged ₹'+amt+' to expenses (Food)');
+    }
+    renderGrocery();
+  }
+
+  document.getElementById('gAddBtn').addEventListener('click', async () => {
+    const name = document.getElementById('gItemName').value.trim(); if(!name) return;
+    const qty = document.getElementById('gItemQty').value.trim();
+    const staple = document.getElementById('gItemStaple').checked;
+    data.groceries.push({ id:gcUid(), name, qty, staple, bought:false, ts:Date.now() });
+    document.getElementById('gItemName').value=''; document.getElementById('gItemQty').value=''; document.getElementById('gItemStaple').checked=false;
+    await saveData(); renderGrocery();
+  });
+  document.getElementById('gItemName').addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); document.getElementById('gAddBtn').click(); } });
+
+  const CHORE_STEP = { daily:1, weekly:7, monthly:30 };
+  function choreNextDue(freq){
+    if(freq==='once') return null;
+    const d = new Date(); d.setDate(d.getDate() + (CHORE_STEP[freq]||7));
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function renderChores(){
+    const list = [...data.chores].sort((a,b)=> String(a.due||'9999').localeCompare(String(b.due||'9999')));
+    const box = document.getElementById('cList');
+    const t = todayStr();
+    box.innerHTML = list.length ? list.map(c => {
+      const over = c.due && c.due <= t;
+      const dueLbl = c.due ? ('due '+new Date(c.due+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'})) : 'one-off';
+      return `<div class="gc-row">
+        <label style="cursor:default"><span class="gc-name">${gcEsc(c.name)}<em>· ${c.freq}</em></span></label>
+        <span class="gc-sub ${over?'over':''}">${over?'due now':dueLbl}</span>
+        <button class="gc-done" data-cdone="${c.id}">Done</button>
+        <button class="gc-del" data-cdel="${c.id}">✕</button>
+      </div>`;
+    }).join('') : '<div class="gc-empty">No chores yet.</div>';
+    box.querySelectorAll('[data-cdone]').forEach(b => b.onclick = async () => {
+      const c = data.chores.find(x => x.id === Number(b.dataset.cdone)); if(!c) return;
+      const nd = choreNextDue(c.freq);
+      if(nd){ c.due = nd; } else { data.chores = data.chores.filter(x => x.id !== c.id); }
+      await saveData(); renderChores(); showToast('Done ✓');
+    });
+    box.querySelectorAll('[data-cdel]').forEach(b => b.onclick = async () => {
+      data.chores = data.chores.filter(x => x.id !== Number(b.dataset.cdel)); await saveData(); renderChores();
+    });
+  }
+  document.querySelectorAll('#cFreqRow .chip').forEach(ch => ch.addEventListener('click', () => {
+    choreFreq = ch.dataset.freq;
+    document.querySelectorAll('#cFreqRow .chip').forEach(x => x.classList.toggle('selected-home', x===ch));
+  }));
+  document.getElementById('cAddBtn').addEventListener('click', async () => {
+    const name = document.getElementById('cChoreName').value.trim(); if(!name) return;
+    data.chores.push({ id:gcUid(), name, freq:choreFreq, due: choreFreq==='once' ? null : todayStr() });
+    document.getElementById('cChoreName').value='';
+    await saveData(); renderChores();
+  });
+  document.querySelectorAll('#homeToggle .chip').forEach(ch => ch.addEventListener('click', () => { homeTab = ch.dataset.home; renderHome(); }));
+
+  /* ---------- Plan: in-app calendar + timeline (reads existing dated data) ---------- */
+  let planView = 'agenda';
+  let planMonth = (function(){ const d = new Date(); d.setDate(1); return d; })();
+  let planSel = todayStr();
+
+  function pdParse(s){ return new Date(s+'T00:00:00'); }
+  function pdStr(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function pdDiff(a,b){ return Math.round((pdParse(b)-pdParse(a))/86400000); }
+  function planColor(kind, item){
+    if(kind==='chore') return 'var(--moss)';
+    if(kind==='bill') return 'var(--amber)';
+    if(kind==='goal') return 'var(--brass-deep)';
+    if(kind==='event') return (item && item.type==='trip') ? 'var(--trip)' : 'var(--slate)';
+    return 'var(--ink-soft)';
+  }
+  function planPoints(){
+    const pts=[];
+    (data.chores||[]).forEach(c=>{ if(c.due) pts.push({date:c.due, kind:'chore', label:c.name}); });
+    (data.bills||[]).forEach(b=>{ if(b.nextDueDate) pts.push({date:b.nextDueDate, kind:'bill', label:b.name+' '+fmt(b.amount)}); });
+    (data.goals||[]).forEach(g=>{ if(g.targetDate) pts.push({date:g.targetDate, kind:'goal', label:g.name}); });
+    return pts.map(p=>({ ...p, color:planColor(p.kind) }));
+  }
+  function planSpans(){
+    return (data.events||[]).filter(ev=>ev.startDate).map(ev=>({
+      start:ev.startDate, end:ev.endDate||ev.startDate, kind:'event', type:ev.type,
+      label:ev.name, color:planColor('event',ev)
+    }));
+  }
+  function planLegend(){
+    const L=[['Chores','var(--moss)'],['Bills','var(--amber)'],['Trips/Events','var(--slate)'],['Goals','var(--brass-deep)']];
+    return '<div class="cal-legrow">'+L.map(x=>`<span class="cal-leg"><span class="cal-dot" style="background:${x[1]}"></span>${x[0]}</span>`).join('')+'</div>';
+  }
+  function itemsOnDay(dayStr, pts, spans){
+    const out=[];
+    pts.forEach(p=>{ if(p.date===dayStr) out.push({color:p.color, label:p.label}); });
+    spans.forEach(s=>{ if(dayStr>=s.start && dayStr<=s.end){ const tot=pdDiff(s.start,s.end)+1; const n=pdDiff(s.start,dayStr)+1; out.push({color:s.color, label:s.label + (tot>1?` (day ${n}/${tot})`:'')}); } });
+    return out;
+  }
+
+  function renderPlan(){
+    const views={ agenda:'planAgenda', calendar:'planCalendar', forecast:'planForecast', goals:'planGoals', habits:'planHabits', timeline:'planTimeline' };
+    Object.keys(views).forEach(v=>{ const el=document.getElementById(views[v]); if(el) el.style.display=(v===planView)?'block':'none'; });
+    document.querySelectorAll('#planToggle .chip').forEach(c=>c.classList.toggle('selected-home', c.dataset.plan===planView));
+    if(planView==='calendar') renderCalendar();
+    else if(planView==='timeline') renderTimeline();
+    else if(planView==='agenda') renderAgenda();
+    else if(planView==='forecast') renderForecast();
+    else if(planView==='goals') renderGoals();
+    else if(planView==='habits') renderHabitHeatmap();
+  }
+
+  function renderCalendar(){
+    const pts=planPoints(), spans=planSpans();
+    document.getElementById('planMonthLabel').textContent = planMonth.toLocaleDateString('en-IN',{month:'long', year:'numeric'});
+    document.getElementById('calDow').innerHTML = ['S','M','T','W','T','F','S'].map(d=>`<div class="cal-dow">${d}</div>`).join('');
+    const year=planMonth.getFullYear(), month=planMonth.getMonth();
+    const startPad=new Date(year,month,1).getDay();
+    const daysInMonth=new Date(year,month+1,0).getDate();
+    const cells=[];
+    for(let i=0;i<startPad;i++){ cells.push({d:new Date(year,month,1-(startPad-i)), other:true}); }
+    for(let dn=1;dn<=daysInMonth;dn++){ cells.push({d:new Date(year,month,dn), other:false}); }
+    while(cells.length%7!==0){ const last=cells[cells.length-1].d; const nd=new Date(last); nd.setDate(nd.getDate()+1); cells.push({d:nd, other:true}); }
+    const t=todayStr();
+    document.getElementById('calGrid').innerHTML = cells.map(c=>{
+      const ds=pdStr(c.d);
+      const items=itemsOnDay(ds, pts, spans);
+      const dots=items.slice(0,4).map(it=>`<span class="cal-dot" style="background:${it.color}"></span>`).join('');
+      const cls=['cal-cell']; if(c.other)cls.push('other'); if(ds===t)cls.push('today'); if(ds===planSel)cls.push('sel');
+      return `<div class="${cls.join(' ')}" data-day="${ds}"><span class="cal-daynum">${c.d.getDate()}</span><div class="cal-dots">${dots}</div></div>`;
+    }).join('');
+    document.getElementById('calGrid').querySelectorAll('[data-day]').forEach(el=>el.onclick=()=>{ planSel=el.dataset.day; renderCalendar(); });
+
+    const det=itemsOnDay(planSel, pts, spans);
+    const dlabel=pdParse(planSel).toLocaleDateString('en-IN',{weekday:'short', day:'2-digit', month:'short'});
+    document.getElementById('calDetail').innerHTML =
+      `<div class="section-title">${dlabel}${planSel===t?' · today':''}</div>` +
+      (det.length ? det.map(it=>`<div class="cal-ev"><span class="cal-dot" style="background:${it.color}"></span><span>${gcEsc(it.label)}</span></div>`).join('')
+                  : '<div class="cal-empty">Nothing scheduled.</div>');
+    document.getElementById('calLegend').innerHTML = planLegend();
+  }
+
+  function renderTimeline(){
+    const pts=planPoints(), spans=planSpans();
+    const DAYW=22, WINDOW=70;
+    const start=todayStr();
+    const endD=new Date(pdParse(start)); endD.setDate(endD.getDate()+WINDOW-1); const end=pdStr(endD);
+    const rows=[];
+    spans.forEach(s=>{ if(s.end>=start && s.start<=end) rows.push({type:'bar', ...s}); });
+    pts.forEach(p=>{ if(p.date>=start && p.date<=end) rows.push({type:'mile', date:p.date, kind:p.kind, label:p.label, color:p.color}); });
+    rows.sort((a,b)=> String(a.start||a.date).localeCompare(String(b.start||b.date)));
+    const trackW=WINDOW*DAYW;
+    const wrap=document.getElementById('tlWrap');
+    if(!rows.length){ wrap.innerHTML='<div class="cal-empty" style="padding:16px;">Nothing scheduled in the next 10 weeks.</div>'; document.getElementById('tlLegend').innerHTML=planLegend(); return; }
+    let ticks='';
+    for(let i=0;i<WINDOW;i+=7){ const d=new Date(pdParse(start)); d.setDate(d.getDate()+i); ticks+=`<span class="tl-tick" style="left:${i*DAYW}px">${d.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span>`; }
+    const rowsHtml=rows.map(r=>{
+      let bar;
+      if(r.type==='bar'){
+        const s=r.start<start?start:r.start, e=r.end>end?end:r.end;
+        const left=Math.max(0,pdDiff(start,s))*DAYW;
+        const w=Math.max(DAYW,(pdDiff(s,e)+1)*DAYW);
+        bar=`<div class="tl-bar" style="left:${left}px;width:${w}px;background:${r.color}">${gcEsc(r.label)}</div>`;
+      } else {
+        const left=pdDiff(start,r.date)*DAYW + DAYW/2 - 7;
+        bar=`<div class="tl-mile" style="left:${left}px;background:${r.color}"></div>`;
+      }
+      return `<div class="tl-row"><div class="tl-label">${gcEsc(r.label)}</div><div class="tl-track" style="width:${trackW}px">${bar}</div></div>`;
+    }).join('');
+    const axis=`<div class="tl-row tl-axisrow"><div class="tl-label"></div><div class="tl-track" style="width:${trackW}px">${ticks}</div></div>`;
+    wrap.innerHTML = `<div class="tl-inner" style="width:${104+trackW}px">${axis}${rowsHtml}</div>`;
+    document.getElementById('tlLegend').innerHTML = planLegend();
+  }
+
+  function fmtShort(n){ n=Number(n)||0; if(n>=100000) return '₹'+(n/100000).toFixed(1).replace(/\.0$/,'')+'L'; if(n>=1000) return '₹'+Math.round(n/1000)+'k'; return '₹'+n; }
+
+  function renderAgenda(){
+    const t=todayStr();
+    const items=[];
+    (data.chores||[]).forEach(c=>{ if(c.due) items.push({date:c.due, kind:'chore', label:c.name+' · '+c.freq, color:'var(--moss)', cid:c.id}); });
+    (data.bills||[]).forEach(b=>{ if(b.nextDueDate) items.push({date:b.nextDueDate, kind:'bill', label:b.name+' '+fmt(b.amount), color:'var(--amber)'}); });
+    (data.goals||[]).forEach(g=>{ if(g.targetDate) items.push({date:g.targetDate, kind:'goal', label:'Goal: '+g.name, color:'var(--brass-deep)'}); });
+    (data.events||[]).forEach(ev=>{ if(ev.startDate){ const end=ev.endDate||ev.startDate; const span=end!==ev.startDate?(' → '+pdParse(end).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})):''; items.push({date:ev.startDate, kind:'event', label:(ev.type==='trip'?'Trip: ':'')+ev.name+span, color:(ev.type==='trip'?'var(--trip)':'var(--slate)')}); } });
+    items.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    const names=['Overdue','Today','Next 7 days','This month','Later'];
+    const groups=[[],[],[],[],[]];
+    items.forEach(it=>{
+      let bk; if(it.date<t) bk=0; else if(it.date===t) bk=1; else { const d=pdDiff(t,it.date); bk = d<=7?2 : d<=30?3 : 4; }
+      groups[bk].push(it);
+    });
+    let html='';
+    groups.forEach((g,i)=>{
+      if(!g.length) return;
+      html+=`<div class="section-title">${names[i]}</div>`;
+      html+=g.map(it=>{
+        const dl = it.date===t?'today':pdParse(it.date).toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short'});
+        const done = it.kind==='chore' ? `<button class="gc-done ag-done" data-agchore="${it.cid}">Done</button>` : '';
+        return `<div class="ag-row"><span class="cal-dot" style="background:${it.color}"></span><div class="ag-main"><span class="gc-name">${gcEsc(it.label)}</span><span class="ag-date">${dl}</span></div>${done}</div>`;
+      }).join('');
+    });
+    const box=document.getElementById('planAgenda');
+    box.innerHTML = html || `<div class="cal-empty">Nothing scheduled. Add chores, bills or trips and they'll show up here.</div>`;
+    box.querySelectorAll('[data-agchore]').forEach(b=>b.onclick=async()=>{
+      const c=data.chores.find(x=>String(x.id)===b.dataset.agchore); if(!c) return;
+      const nd=choreNextDue(c.freq);
+      if(nd){ c.due=nd; } else { data.chores=data.chores.filter(x=>x.id!==c.id); }
+      await saveData(); renderAgenda(); showToast('Done ✓');
+    });
+  }
+
+  function renderForecast(){
+    const box=document.getElementById('planForecast');
+    const bills=(data.bills||[]).filter(b=>b.nextDueDate && b.amount);
+    if(!bills.length){ box.innerHTML='<div class="cal-empty">No bills yet. Add recurring bills or EMIs and their next 6 months project here.</div>'; return; }
+    const base=new Date(); base.setDate(1); base.setHours(0,0,0,0);
+    const months=[];
+    for(let i=0;i<6;i++){ const d=new Date(base.getFullYear(), base.getMonth()+i, 1); months.push({y:d.getFullYear(), m:d.getMonth(), label:d.toLocaleDateString('en-IN',{month:'short'}), total:0}); }
+    const windowEnd=new Date(base.getFullYear(), base.getMonth()+6, 1);
+    bills.forEach(b=>{
+      const step=Number(b.frequencyMonths)||0;
+      let occ=pdParse(b.nextDueDate);
+      if(step<=0){ const mi=months.findIndex(mm=>mm.y===occ.getFullYear()&&mm.m===occ.getMonth()); if(mi>=0) months[mi].total+=Number(b.amount); return; }
+      let guard=0;
+      while(occ<windowEnd && guard<160){
+        if(occ>=base){ const mi=months.findIndex(mm=>mm.y===occ.getFullYear()&&mm.m===occ.getMonth()); if(mi>=0) months[mi].total+=Number(b.amount); }
+        occ=new Date(occ.getFullYear(), occ.getMonth()+step, occ.getDate());
+        guard++;
+      }
+    });
+    const max=Math.max(1,...months.map(m=>m.total));
+    const bars=months.map(m=>{ const h=Math.round((m.total/max)*128); return `<div class="fc-col"><div class="fc-val">${m.total?fmtShort(m.total):''}</div><div class="fc-bar" style="height:${Math.max(2,h)}px"></div><div class="fc-lbl">${m.label}</div></div>`; }).join('');
+    const total=months.reduce((s,m)=>s+m.total,0);
+    box.innerHTML=`<div class="section-title">Bills due — next 6 months</div><div class="fc-chart">${bars}</div><div class="cal-empty">Projected total: ${fmt(total)}.</div>`;
+  }
+
+  function renderGoals(){
+    const box=document.getElementById('planGoals');
+    const goals=data.goals||[];
+    if(!goals.length){ box.innerHTML='<div class="cal-empty">No savings goals yet.</div>'; return; }
+    const t=todayStr();
+    box.innerHTML=goals.map(g=>{
+      const target=Number(g.target)||0, saved=Math.min(Number(g.saved)||0, target||Number(g.saved)||0);
+      const pct= target>0 ? Math.min(100, Math.round(saved/target*100)) : 0;
+      let sub;
+      if(g.targetDate){
+        const daysLeft=pdDiff(t, g.targetDate); const remain=Math.max(0, target-saved);
+        if(remain<=0) sub='Reached ✓';
+        else if(daysLeft>0){ const perMonth=remain/Math.max(0.5, daysLeft/30); sub=`${daysLeft}d left · ${fmt(remain)} to go · ~${fmt(Math.round(perMonth))}/mo`; }
+        else sub=`Overdue · ${fmt(remain)} short`;
+      } else { sub=`${fmt(saved)} of ${fmt(target)}`; }
+      return `<div class="goal-card"><div class="goal-top"><span class="goal-name">${gcEsc(g.name)}</span><span class="goal-pct">${pct}%</span></div><div class="goal-track"><div class="goal-fill" style="width:${pct}%"></div></div><div class="goal-sub">${sub}</div></div>`;
+    }).join('');
+  }
+
+  function renderHabitHeatmap(){
+    const box=document.getElementById('planHabits');
+    const defs=data.habitDefs||[];
+    if(!defs.length){ box.innerHTML='<div class="cal-empty">No habits defined yet — add them under Health → Habits.</div>'; return; }
+    const nHab=defs.length, WEEKS=16, DAYS=WEEKS*7;
+    const counts={};
+    (data.habitLogs||[]).forEach(l=>{ (counts[l.date]||(counts[l.date]=new Set())).add(l.habitId); });
+    const end=new Date(); const t=todayStr();
+    const start=new Date(); start.setDate(start.getDate()-(DAYS-1)); start.setDate(start.getDate()-start.getDay());
+    const cells=[]; let cur=new Date(start);
+    while(cur<=end){
+      const ds=pdStr(cur); const done=counts[ds]?counts[ds].size:0; const ratio=nHab>0?done/nHab:0;
+      let lvl=0; if(ratio>=1)lvl=4; else if(ratio>=0.67)lvl=3; else if(ratio>=0.34)lvl=2; else if(ratio>0)lvl=1;
+      cells.push({ds,lvl,done,future:ds>t}); cur=new Date(cur); cur.setDate(cur.getDate()+1);
+    }
+    const cols=[]; for(let i=0;i<cells.length;i+=7){ cols.push(cells.slice(i,i+7)); }
+    const grid=cols.map(col=>`<div class="hm-col">${col.map(c=>`<span class="hm-cell hm-l${c.lvl}${c.future?' hm-future':''}" title="${c.ds}: ${c.done}/${nHab}"></span>`).join('')}</div>`).join('');
+    box.innerHTML=`<div class="section-title">Habit consistency — last ${WEEKS} weeks</div><div class="hm-wrap"><div class="hm-grid">${grid}</div></div><div class="hm-legend">Less <span class="hm-cell hm-l0"></span><span class="hm-cell hm-l1"></span><span class="hm-cell hm-l2"></span><span class="hm-cell hm-l3"></span><span class="hm-cell hm-l4"></span> More</div>`;
+  }
+
+  document.querySelectorAll('#planToggle .chip').forEach(ch=>ch.addEventListener('click',()=>{ planView=ch.dataset.plan; renderPlan(); }));
+  document.getElementById('planPrev').addEventListener('click',()=>{ planMonth.setMonth(planMonth.getMonth()-1); renderCalendar(); });
+  document.getElementById('planNext').addEventListener('click',()=>{ planMonth.setMonth(planMonth.getMonth()+1); renderCalendar(); });
 
   /* ---------- Init (runs once the user is signed in) ---------- */
   async function __ledgerBoot(){
