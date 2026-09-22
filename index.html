@@ -1104,6 +1104,10 @@
           <button type="button" class="chip" data-freq="monthly">Monthly</button>
           <button type="button" class="chip" data-freq="once">One-off</button>
         </div>
+        <div style="margin-top:12px;">
+          <label style="display:block;font-size:11px;color:var(--ink-soft);margin-bottom:5px;">Due date</label>
+          <input type="date" id="cChoreDate">
+        </div>
         <button type="button" class="gc-btn" id="cAddBtn" style="margin-top:12px;">Add chore</button>
       </div>
       <div class="section-title">Due &amp; upcoming</div>
@@ -3874,8 +3878,10 @@ onAuthStateChanged(auth, async (user) => {
   }));
   document.getElementById('cAddBtn').addEventListener('click', async () => {
     const name = document.getElementById('cChoreName').value.trim(); if(!name) return;
-    data.chores.push({ id:gcUid(), name, freq:choreFreq, due: choreFreq==='once' ? null : todayStr() });
+    const chosen = document.getElementById('cChoreDate').value || todayStr();
+    data.chores.push({ id:gcUid(), name, freq:choreFreq, due: chosen });
     document.getElementById('cChoreName').value='';
+    document.getElementById('cChoreDate').value = todayStr();
     await saveData(); renderChores();
   });
   document.querySelectorAll('#homeToggle .chip').forEach(ch => ch.addEventListener('click', () => { homeTab = ch.dataset.home; renderHome(); }));
@@ -4100,6 +4106,7 @@ onAuthStateChanged(auth, async (user) => {
   /* ---------- Init (runs once the user is signed in) ---------- */
   async function __ledgerBoot(){
     document.getElementById('fDate').value = todayStr();
+    { const cd=document.getElementById('cChoreDate'); if(cd) cd.value = todayStr(); }
     await loadData();
     renderMonthLabel();
     setType('expense');
